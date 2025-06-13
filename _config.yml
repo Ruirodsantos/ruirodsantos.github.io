@@ -1,11 +1,10 @@
-title: AI Discovery Blog
+title: AI Discovery Blog 
 email: hello@adventis.ai
 description: >-
   Discover the latest tools, breakthroughs, and trends in Artificial Intelligence.
-baseurl: "/ai-discovery-blog" # important for subfolder hosting
+baseurl: "/ai-discovery-blog" # ⚠️ importante: começa com / e igual ao nome do repositório
 url: "https://ruirodsantos.github.io"
 
-# Build settings
 theme: minima
 plugins:
   - jekyll-feed
