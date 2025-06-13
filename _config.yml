@@ -1,2 +1,12 @@
 title: AI Discovery Blog
 email: hello@adventis.ai
+description: >-
+  Discover the latest tools, breakthroughs, and trends in Artificial Intelligence.
+baseurl: "" # leave blank unless you're using a subfolder
+url: "https://ruirodsantos.github.io/ai-discovery-blog" # your repo URL
+
+# Build settings
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
