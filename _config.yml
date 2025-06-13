@@ -1,7 +1,0 @@
-title: AI Discovery Blog
-description: A simple blog about the latest in AI
-baseurl: ""
-url: "https://ruirodsantos.github.io"
-theme: minima
-plugins:
-  - jekyll-feed
