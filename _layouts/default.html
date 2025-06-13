@@ -1,16 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>{{ page.title }}</title>
-  <link rel="stylesheet" href="{{ "/assets/style.css" | relative_url }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ page.title }} – AI Discovery Blog</title>
+  <link rel="stylesheet" href="{{ "/assets/style.css" | relative_url }}" />
 </head>
 <body>
   <header>
-    <h1><a href="{{ "/" | relative_url }}">AI Discovery Blog</a></h1>
-    <nav><a href="{{ "/about.html" | relative_url }}">About</a> | <a href="{{ "/contact.html" | relative_url }}">Contact</a></nav>
+    <div class="header-container">
+      <a href="{{ "/" | relative_url }}" class="logo"><span class="logo-emoji">🧠</span> AI Discovery Blog</a>
+      <button id="navToggle" class="hamburger" aria-label="Toggle navigation">&#9776;</button>
+      <ul class="nav-links">
+        <li><a href="{{ "/" | relative_url }}">Home</a></li>
+        <li><a href="{{ "/about.html" | relative_url }}">About</a></li>
+        <li><a href="{{ "/contact.html" | relative_url }}">Contact</a></li>
+      </ul>
+    </div>
+    <p class="tagline">Discover the latest tools, breakthroughs, and trends in Artificial Intelligence</p>
   </header>
-  <main>{{ content }}</main>
-  <footer><p>&copy; 2025 AI Discovery Blog</p></footer>
+  <main>
+    {{ content }}
+  </main>
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 AI Discovery Blog</p>
+    </div>
+  </footer>
+  <script>
+    // Toggle mobile navigation menu
+    document.getElementById('navToggle').addEventListener('click', function() {
+      document.querySelector('header').classList.toggle('nav-open');
+    });
+  </script>
 </body>
 </html>
