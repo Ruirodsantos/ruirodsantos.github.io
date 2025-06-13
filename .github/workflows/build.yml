@@ -6,10 +6,12 @@ on:
       - main
 
 jobs:
-  jekyll:
+  github-pages:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -26,7 +28,7 @@ jobs:
           echo 'gem "jekyll-seo-tag"' >> Gemfile
           bundle install
 
-      - name: Build site with Jekyll
+      - name: Build Jekyll site
         run: bundle exec jekyll build
 
       - name: Deploy to GitHub Pages
