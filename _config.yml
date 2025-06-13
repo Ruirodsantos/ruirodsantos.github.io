@@ -1,1 +1,12 @@
 title: AI Discovery Blog
+description: Discover the latest tools, breakthroughs, and trends in Artificial Intelligence.
+baseurl: "" # leave blank for GitHub Pages
+url: "https://ruirodsantos.github.io/ai-discovery-blog" # your repo site URL
+
+theme: minima
+
+plugins:
+  - jekyll-feed
+
+markdown: kramdown
+future: true
