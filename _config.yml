@@ -1,0 +1,31 @@
+title: AI Discovery Blog
+tagline: Discover the latest in Artificial Intelligence
+description: News, tools, and insights from the AI world.
+url: "https://ruirodsantos.github.io"
+baseurl: "/ai-discovery-blog"
+lang: en
+theme: jekyll-theme-chirpy
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-paginate
+  - jekyll-sitemap
+
+paginate: 5
+paginate_path: "/page:num/"
+markdown: kramdown
+highlighter: rouge
+
+# SEO
+author:
+  name: Rui Rodrigues dos Santos
+  site: https://ruirodsantos.github.io/ai-discovery-blog
+
+logo: /assets/img/logo.png
+social:
+  name: Rui
+  email: your@email.com
+  links:
+    - https://twitter.com/
+    - https://github.com/ruirodsantos
+    - https://www.linkedin.com/in/yourprofile/
