@@ -1,45 +1,33 @@
-import feedparser
-from datetime import datetime
+name: Auto-Update AI Blog
 
-# RSS feeds from AI leaders
-FEED_URLS = [
-    "https://openai.com/blog/rss.xml",
-    "https://deepmind.google/rss.xml",
-    "https://www.anthropic.com/news/rss.xml"
-]
+on:
+  schedule:
+    - cron: '0 4 * * *'  # Runs daily at 08:00 Dubai time (UTC+4)
+  workflow_dispatch:       # Allows manual trigger
 
-# Max total posts (initial bulk)
-MAX_POSTS = 10
-fetched_posts = []
+jobs:
+  update-blog:
+    runs-on: ubuntu-latest
 
-for url in FEED_URLS:
-    feed = feedparser.parse(url)
-    for entry in feed.entries:
-        if len(fetched_posts) >= MAX_POSTS:
-            break
-        title = entry.title
-        date = entry.published if 'published' in entry else datetime.now().strftime('%b %d, %Y')
-        summary = entry.summary if 'summary' in entry else ''
-        link = entry.link
-        post_html = f"""
-<article class="post">
-  <h2>{title}</h2>
-  <p class="date">🗓️ {date}</p>
-  <p>{summary}</p>
-  <a class="readmore" href="{link}">Read more</a>
-</article>
-"""
-        if post_html not in fetched_posts:
-            fetched_posts.append(post_html)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-if fetched_posts:
-    with open("index.html", "r") as file:
-        html = file.read()
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-    # Replace <main> content
-    start = html.find("<main>")
-    end = html.find("</main>")
-    if start != -1 and end != -1:
-        new_html = html[:start + 6] + "\n" + "\n".join(fetched_posts) + "\n</main>" + html[end + 7:]
-        with open("index.html", "w") as file:
-            file.write(new_html)
+      - name: Install Python dependencies
+        run: pip install feedparser
+
+      - name: Run AI news fetcher
+        run: python fetch_ai_news.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'Rui Blog Bot'
+          git config --global user.email 'action@github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m "Auto-update: New AI news"
+          git push
