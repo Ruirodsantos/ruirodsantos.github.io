@@ -1,33 +1,45 @@
-name: Auto-Update AI Blog
+import feedparser
+from datetime import datetime
 
-on:
-  schedule:
-    - cron: '0 4 * * *'  # Runs daily at 08:00 Dubai time (UTC+4)
-  workflow_dispatch:       # Allows manual trigger
+FEED_URLS = [
+    "https://openai.com/blog/rss.xml",
+    "https://deepmind.google/rss.xml",
+    "https://www.anthropic.com/news/rss.xml"
+]
 
-jobs:
-  update-blog:
-    runs-on: ubuntu-latest
+MAX_POSTS = 10
+fetched_posts = []
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+for url in FEED_URLS:
+    feed = feedparser.parse(url)
+    for entry in feed.entries:
+        if len(fetched_posts) >= MAX_POSTS:
+            break
+        title = entry.title
+        date = entry.published if 'published' in entry else datetime.now().strftime('%b %d, %Y')
+        summary = entry.summary if 'summary' in entry else ''
+        link = entry.link
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
+        post_html = f"""
+<article class="post">
+  <h2>{title}</h2>
+  <p class="date">🗓️ {date}</p>
+  <p>{summary}</p>
+  <a class="readmore" href="{link}" target="_blank">Read more</a>
+</article>
+""".strip()
 
-      - name: Install Python dependencies
-        run: pip install feedparser
+        fetched_posts.append(post_html)
 
-      - name: Run AI news fetcher
-        run: python fetch_ai_news.py
+# Read and update index.html
+if fetched_posts:
+    with open("index.html", "r", encoding="utf-8") as file:
+        html = file.read()
 
-      - name: Commit and push changes
-        run: |
-          git config --global user.name 'Rui Blog Bot'
-          git config --global user.email 'action@github.com'
-          git add index.html
-          git diff --cached --quiet || git commit -m "Auto-update: New AI news"
-          git push
+    start = html.find("<main>")
+    end = html.find("</main>")
+
+    if start != -1 and end != -1:
+        new_html = html[:start + 6] + "\n\n" + "\n\n".join(fetched_posts) + "\n\n" + html[end:]
+        with open("index.html", "w", encoding="utf-8") as file:
+            file.write(new_html)
