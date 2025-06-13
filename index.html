@@ -1,13 +1,27 @@
----
-layout: default
-title: AI Discovery Blog
----
-<h1>Welcome to the AI Discovery Blog</h1>
-<ul>
-{% for post in site.posts %}
-  <li>
-    <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
-    <p>{{ post.excerpt }}</p>
-  </li>
-{% endfor %}
-</ul>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ page.title }}</title>
+  <link rel="stylesheet" href="/ai-discovery-blog/assets/style.css">
+</head>
+<body>
+  <header>
+    <h1><a href="{{ '/' | relative_url }}"> {{ site.title }}</a></h1>
+    <p>Discover the latest tools, breakthroughs, and trends in Artificial Intelligence</p>
+    <nav>
+      <a href="{{ '/' | relative_url }}">Home</a>
+      <a href="{{ '/about.html' | relative_url }}">About</a>
+      <a href="{{ '/contact.html' | relative_url }}">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    {{ content }}
+  </main>
+
+  <footer>
+    <p>&copy; {{ "now" | date: "%Y" }} {{ site.title }} | Powered by Adventis</p>
+  </footer>
+</body>
+</html>
