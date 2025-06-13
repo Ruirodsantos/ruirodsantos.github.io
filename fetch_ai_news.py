@@ -3,9 +3,7 @@ from datetime import datetime
 import os
 
 FEED_URL = "https://feeds.feedburner.com/TechCrunch/artificial-intelligence"
-
-NUM_POSTS_NOW = 10  # Show these now
-POSTS_PER_DAY = 1   # From tomorrow
+NUM_INITIAL_POSTS = 10
 
 HTML_TEMPLATE = """
 <article class="post">
@@ -16,46 +14,36 @@ HTML_TEMPLATE = """
 </article>
 """
 
-def fetch_ai_posts():
+def fetch_ai_posts(limit=10):
     feed = feedparser.parse(FEED_URL)
-    today = datetime.now().strftime("%Y-%m-%d")
+    posts_html = ""
 
-    html_output = ""
-
-    for i, entry in enumerate(feed.entries[:NUM_POSTS_NOW]):
-        date = datetime(*entry.published_parsed[:6]).strftime("%B %d, %Y")
+    for entry in feed.entries[:limit]:
         title = entry.title
-        summary = entry.summary.split(".")[0] + "."  # 1-sentence summary
+        summary = entry.summary.split(".")[0] + "."  # One sentence
         link = entry.link
+        date = datetime(*entry.published_parsed[:6]).strftime("%B %d, %Y")
+        posts_html += HTML_TEMPLATE.format(title=title, date=date, summary=summary, link=link)
 
-        html_output += HTML_TEMPLATE.format(title=title, date=date, summary=summary, link=link)
-
-    return html_output
+    return posts_html
 
 def update_index_html():
-    path = "index.html"
+    with open("index.html", "r", encoding="utf-8") as f:
+        html = f.read()
 
-    if not os.path.exists(path):
-        print("index.html not found.")
-        return
-
-    with open(path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    start = content.find("<main id=\"home\">")
-    end = content.find("</main>") + len("</main>")
-
+    start = html.find('<main id="home">')
+    end = html.find("</main>", start) + len("</main>")
     if start == -1 or end == -1:
-        print("Main content section not found.")
+        print("Couldn't find <main> section.")
         return
 
-    new_main = f"<main id=\"home\">\n{fetch_ai_posts()}\n</main>"
-    new_content = content[:start] + new_main + content[end:]
+    new_main = f'<main id="home">\n{fetch_ai_posts(NUM_INITIAL_POSTS)}\n</main>'
+    updated = html[:start] + new_main + html[end:]
 
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(new_content)
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(updated)
 
-    print("index.html updated successfully.")
+    print("✅ 10 posts added to index.html")
 
 if __name__ == "__main__":
     update_index_html()
