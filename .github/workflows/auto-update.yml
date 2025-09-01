@@ -1,33 +1,34 @@
 name: Auto Update Blog
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Permite executar manualmente
 
 jobs:
-  build:
+  update:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.10
+          python-version: 3.x
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          pip install requests python-slugify
 
       - name: Run blog update script
         run: |
           python generate_ai_posts.py > script_output.log
           cat script_output.log
 
-      - name: Commit and push if changes
+      - name: Commit and push changes
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add _posts
-          git diff --quiet && git diff --staged --quiet || git commit -m "🤖 Update AI posts"
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add _posts/*.md
+          git commit -m "🤖 Auto-update blog posts" || echo "No changes to commit"
           git push
