@@ -1,13 +1,13 @@
 import os
 import requests
 from datetime import datetime
-from slugify import slugify  # Add this for safe filenames
+from slugify import slugify  # <- IMPORTANTE
 
-# === CONFIGURATION ===
+# === CONFIGURAÇÕES ===
 NUM_POSTS = 10
 POSTS_DIR = "_posts"
 NEWS_API_URL = "https://newsapi.org/v2/everything"
-NEWS_API_KEY = os.getenv("NEWS_API_KEY")  # use GitHub secret instead of hardcoding
+NEWS_API_KEY = os.environ.get("NEWS_API_KEY")  # <- Usa o secret definido no GitHub
 
 PARAMS = {
     "q": "artificial intelligence",
@@ -17,19 +17,19 @@ PARAMS = {
     "apiKey": NEWS_API_KEY,
 }
 
-# === FETCH NEWS ===
+# === BUSCAR NOTÍCIAS ===
 response = requests.get(NEWS_API_URL, params=PARAMS)
 articles = response.json().get("articles", [])
 
 if not os.path.exists(POSTS_DIR):
     os.makedirs(POSTS_DIR)
 
-# === CREATE POSTS ===
+# === CRIAR POSTS ===
 for article in articles:
     try:
         date = datetime.strptime(article["publishedAt"], "%Y-%m-%dT%H:%M:%SZ")
-        slug = slugify(article["title"])[:50]
-        filename = f"{date.strftime('%Y-%m-%d')}-{slug}.md"
+        title_slug = slugify(article['title'])[:50]
+        filename = f"{date.strftime('%Y-%m-%d')}-{title_slug}.md"
         filepath = os.path.join(POSTS_DIR, filename)
 
         with open(filepath, "w", encoding="utf-8") as f:
@@ -38,14 +38,9 @@ for article in articles:
             f.write(f"title: \"{article['title']}\"\n")
             f.write(f"date: {date.strftime('%Y-%m-%d')}\n")
             f.write("---\n\n")
+            f.write(f"{article['description'] or 'No description available.'}\n\n")
+            f.write(f"Read more at: [{article['source']['name']}]({article['url']})\n")
 
-            f.write(f"**{article['description'] or 'No description available.'}**\n\n")
-            f.write(f"*Author:* {article.get('author', 'Unknown')}\n\n")
-            f.write(f"*Source:* [{article['source']['name']}]({article['url']})\n\n")
-            f.write("### Full Article\n\n")
-            f.write(f"[Click here to read the full article]({article['url']})\n")
-
-        print(f"✅ Saved: {filename}")
-
+        print(f"✅ Created: {filename}")
     except Exception as e:
-        print(f"❌ Failed to save article: {e}")
+        print(f"⚠️ Error creating post: {e}")
