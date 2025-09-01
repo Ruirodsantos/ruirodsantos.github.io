@@ -1,12 +1,10 @@
 name: Auto Update Blog
 
 on:
-  schedule:
-    - cron: '0 5 * * *'  # Todos os dias às 05:00 UTC
-  workflow_dispatch:      # Permite também executar manualmente
+  workflow_dispatch:
 
 jobs:
-  update-posts:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,20 +14,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: 3.10
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+        run: pip install requests
 
-      - name: Run post generation script
-        run: python generate_ai_posts.py
-
-      - name: Commit changes
+      - name: Run blog update script
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
+          python generate_ai_posts.py > script_output.log
+          cat script_output.log
+
+      - name: Commit and push if changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
           git add _posts
-          git commit -m "🤖 Auto-update blog posts" || echo "No changes to commit"
+          git diff --quiet && git diff --staged --quiet || git commit -m "🤖 Update AI posts"
           git push
