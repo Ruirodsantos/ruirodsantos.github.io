@@ -1,51 +1,43 @@
-import os
-import requests
+import feedparser
+from slugify import slugify
 from datetime import datetime
-from slugify import slugify  # Make sure python-slugify is installed
+import os
 
-# === CONFIGURATION ===
-NUM_POSTS = 10
+# Feed RSS de notícias de IA
+RSS_FEED_URL = "https://www.investing.com/rss/news_285.rss"
+
+# Pasta onde os posts são salvos
 POSTS_DIR = "_posts"
-NEWS_API_URL = "https://newsapi.org/v2/everything"
-NEWS_API_KEY = "e5b2c5ce20e84308b3897c872cb830d1"  # Your actual NewsAPI key
 
-PARAMS = {
-    "q": "\"artificial intelligence\" OR \"AI technology\" OR \"machine learning\"",
-    "language": "en",
-    "sortBy": "publishedAt",
-    "pageSize": NUM_POSTS,
-    "apiKey": NEWS_API_KEY,
-}
+# Cria a pasta se não existir
+os.makedirs(POSTS_DIR, exist_ok=True)
 
-# === FETCH NEWS ===
-response = requests.get(NEWS_API_URL, params=PARAMS)
-articles = response.json().get("articles", [])
+# Faz parsing do feed
+feed = feedparser.parse(RSS_FEED_URL)
 
-if not os.path.exists(POSTS_DIR):
-    os.makedirs(POSTS_DIR)
+# Quantidade de posts novos
+MAX_POSTS = 5
 
-# === CREATE POSTS ===
-for article in articles:
-    # Filter irrelevant content
-    keywords = ["ai", "artificial intelligence", "machine learning", "neural", "deep learning"]
-    content = (article["title"] + " " + (article["description"] or "")).lower()
-    if not any(word in content for word in keywords):
-        continue  # Skip if not relevant
+for entry in feed.entries[:MAX_POSTS]:
+    # Data atual no formato YYYY-MM-DD
+    today_date = datetime.today().strftime('%Y-%m-%d')
 
-    # Generate filename
-    date = datetime.strptime(article["publishedAt"], "%Y-%m-%dT%H:%M:%SZ")
-    safe_title = slugify(article['title'][:60])
-    filename = f"{date.strftime('%Y-%m-%d')}-{safe_title}.md"
-    filepath = os.path.join(POSTS_DIR, filename)
+    # Slug gerado a partir do título
+    post_slug = slugify(entry.title)
 
-    # Write post
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write("---\n")
-        f.write(f"layout: post\n")
-        f.write(f"title: \"{article['title']}\"\n")
-        f.write(f"date: {date.strftime('%Y-%m-%d')}\n")
-        f.write("---\n\n")
-        f.write(f"{article['description'] or 'No description available.'}\n\n")
-        f.write(f"Read more at: [{article['source']['name']}]({article['url']})\n")
+    # Caminho do ficheiro .md
+    file_path = os.path.join(POSTS_DIR, f"{today_date}-{post_slug}.md")
 
-print(f"✅ {len(articles)} filtered and relevant posts created in '{POSTS_DIR}' folder.")
+    # Se o ficheiro já existir, não cria outro
+    if os.path.exists(file_path):
+        continue
+
+    # Escreve o ficheiro com front matter e conteúdo
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(f"""---
+title: "{entry.title}"
+date: {today_date}
+---
+
+{entry.summary}
+""")
