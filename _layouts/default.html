@@ -3,15 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <title>{{ page.title }}</title>
-  <link rel="stylesheet" href="/assets/style.css">
-  <!-- Google AdSense -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google AdSense (código correto) -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575"
-     crossorigin="anonymous"></script>
+    crossorigin="anonymous"></script>
+
+  <!-- Caminho CSS respeitando baseurl -->
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
 </head>
 <body>
   <header>
-    <h1><a href="{{ '/' | relative_url }}">🧠 {{ site.title }}</a></h1>
-    <p>Discover the latest tools, breakthroughs, and trends in Artificial Intelligence</p>
+    <h1><a href="{{ '/' | relative_url }}">{{ site.title }}</a></h1>
+    <p>{{ site.description }}</p>
     <nav>
       <a href="{{ '/' | relative_url }}">Home</a>
       <a href="{{ '/about.html' | relative_url }}">About</a>
@@ -20,17 +24,6 @@
   </header>
 
   <main>
-    <!-- Google AdSense block before content -->
-    <ins class="adsbygoogle"
-         style="display:block; text-align:center; margin-bottom: 20px;"
-         data-ad-client="ca-pub-7715134134171575"
-         data-ad-slot="1234567890"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-         (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
-
     {{ content }}
   </main>
 
