@@ -1,7 +1,7 @@
 name: Auto Update Blog
 
 on:
-  workflow_dispatch:  # Permite executar manualmente
+  workflow_dispatch:  # Executa manualmente
 
 jobs:
   update:
