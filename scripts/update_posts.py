@@ -1,84 +1,43 @@
-import requests
-import datetime
+# 📁 update_posts.py (atualizado)
 import os
+import requests
+import json
+from datetime import datetime
 from slugify import slugify
 
-# Configura o endpoint da API
-API_URL = "https://newsdata.io/api/1/news"
 API_KEY = os.getenv("NEWS_API_KEY")
+BASE_URL = "https://newsdata.io/api/1/news?apikey={}&q=artificial%20intelligence&language=en"
+BLOG_PATH = "./posts"
 
-if not API_KEY:
-    raise ValueError("❌ API_KEY não encontrada. Verifica o nome da variável de ambiente.")
+os.makedirs(BLOG_PATH, exist_ok=True)
 
-# Palavras-chave que queremos seguir
-KEYWORDS = ["artificial intelligence", "machine learning", "AI", "AGI"]
+response = requests.get(BASE_URL.format(API_KEY))
+data = response.json()
 
-# Garante que temos a pasta de posts
-POSTS_FOLDER = "_posts"
-os.makedirs(POSTS_FOLDER, exist_ok=True)
+for article in data.get("results", []):
+    title = article.get("title", "")
+    date_str = article.get("pubDate", "")
+    link = article.get("link", "")
+    content = article.get("description", "") or article.get("content", "")
+    image_url = article.get("image_url")
+    source = article.get("source_id", "Unknown")
 
-def fetch_post():
-    query = " OR ".join(KEYWORDS)
-    params = {
-        "apikey": API_KEY,
-        "q": query,
-        "language": "en",
-        "country": "us",
-        "category": "technology"
-    }
-    res = requests.get(API_URL, params=params)
-    data = res.json()
+    # ⚠️ Filtro de conteúdo fraco
+    if not title or not content or "ONLY AVAILABLE IN PAID PLANS" in content.upper():
+        continue
 
-    if "results" not in data:
-        raise ValueError("Resposta inválida da API: \n" + str(data))
+    slug = slugify(title)
+    date = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
 
-    print(f"🔍 Total de artigos recebidos: {len(data['results'])}")
-
-    for i, article in enumerate(data["results"]):
-        print(f"\n🔎 Artigo {i+1}:")
-        print(f"Título: {article.get('title')}")
-        print(f"Descrição: {article.get('description')}")
-        print(f"Fonte: {article.get('source_id')}")
-        print(f"Link: {article.get('link')}")
-
-        if isinstance(article, dict) and article.get("title") and article.get("description"):
-            return article
-
-    raise ValueError("Nenhum artigo válido encontrado")
-
-def generate_post_content(article):
-    date = datetime.datetime.utcnow().date()
-    slug = slugify(article['title'])[:50]
-    filename = f"{POSTS_FOLDER}/{date}-{slug}.md"
-
-    content_body = article['content'] if isinstance(article.get('content'), str) else article['description']
-
-    content = f"""---
-title: "{article['title']}"
-date: {date}
-excerpt: "{article['description']}"
-categories: [ai, news]
----
-
-Source: [{article.get('source_id', 'source')}]({article.get('link', '#')})
-
-{content_body}
-"""
-    return filename, content.strip()
-
-def save_post(filename, content):
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(content)
-
-def main():
-    try:
-        article = fetch_post()
-        filename, content = generate_post_content(article)
-        save_post(filename, content)
-        print(f"\n✅ Post criado: {filename}")
-    except Exception as e:
-        print(f"\n❌ Erro: {e}")
-        exit(1)
-
-if __name__ == "__main__":
-    main()
+    # 📄 Gerar ficheiro do post
+    post_path = os.path.join(BLOG_PATH, f"{slug}.md")
+    with open(post_path, "w") as f:
+        f.write(f"---\n")
+        f.write(f"title: {title}\n")
+        f.write(f"date: {date}\n")
+        f.write(f"link: {link}\n")
+        f.write(f"source: {source}\n")
+        if image_url:
+            f.write(f"image: {image_url}\n")
+        f.write(f"---\n\n")
+        f.write(content.strip())
