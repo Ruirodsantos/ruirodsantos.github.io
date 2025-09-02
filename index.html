@@ -1,43 +1,39 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Discovery Blog</title>
-    <link rel="stylesheet" href="/assets/css/style.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/style.css" />
   </head>
   <body>
     <header>
       <h1>🧠 AI Discovery Blog</h1>
-      <p class="subtitle">The latest tools, breakthroughs & trends in Artificial Intelligence</p>
+      <p>Discover the latest tools, breakthroughs & trends in Artificial Intelligence.</p>
       <nav>
         <a href="/">Home</a>
-        <a href="/about.html">About</a>
-        <a href="/contact.html">Contact</a>
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
       </nav>
     </header>
 
-    <main class="post-list">
+    <main>
+      <h2>Latest Posts</h2>
       {% for post in site.posts %}
-        <article class="post-card">
-          <a href="{{ post.url }}">
-            {% if post.image %}
-              <img src="{{ post.image }}" alt="Thumbnail for {{ post.title }}">
-            {% endif %}
-            <h2>{{ post.title }}</h2>
-            <p class="date">📅 {{ post.date | date: "%B %d, %Y" }}</p>
-            <p class="excerpt">{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
-          </a>
+        <article>
+          {% if post.image %}
+            <img src="{{ post.image }}" alt="Thumbnail for {{ post.title }}" style="max-width: 100%; height: auto; margin-top: 1rem;" />
+          {% endif %}
+          <h3><a href="{{ post.url }}">{{ post.title }}</a></h3>
+          <p><span role="img" aria-label="calendar">📅</span> {{ post.date | date: "%B %d, %Y" }}</p>
+          <p>{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
         </article>
+        <hr />
       {% endfor %}
     </main>
 
     <footer>
-      <p>&copy; {{ site.time | date: '%Y' }} AI Discovery Blog. All rights reserved.</p>
+      <p>© {{ site.time | date: '%Y' }} AI Discovery Blog. All rights reserved.</p>
     </footer>
   </body>
 </html>
