@@ -3,17 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <title>{{ page.title }}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/assets/style.css">
-
-  <!-- AdSense Script -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575"
      crossorigin="anonymous"></script>
 </head>
 <body>
   <header>
     <h1><a href="{{ '/' | relative_url }}">🧠 {{ site.title }}</a></h1>
-    <p>{{ site.description }}</p>
     <nav>
       <a href="{{ '/' | relative_url }}">Home</a> |
       <a href="{{ '/about.html' | relative_url }}">About</a> |
@@ -21,8 +17,8 @@
     </nav>
   </header>
 
-  <main class="post-page">
-    <!-- Bloco de anúncio -->
+  <main>
+    <!-- Anúncio antes do conteúdo -->
     <ins class="adsbygoogle"
          style="display:block; text-align:center; margin-bottom: 20px;"
          data-ad-client="ca-pub-7715134134171575"
@@ -35,24 +31,39 @@
 
     <article>
       <h2>{{ page.title }}</h2>
-      <p class="post-meta">
-        <strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}
-      </p>
+      <p><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</p>
 
       {% if page.image %}
-        <img src="{{ page.image }}" alt="Post image" class="post-image">
+        <img src="{{ page.image }}" alt="Image for {{ page.title }}" class="post-thumbnail">
       {% endif %}
 
-      <div class="post-content">
-        {{ content }}
+      {{ content }}
+
+      <!-- Partilha -->
+      <div style="margin-top: 20px;">
+        <strong>Share this post:</strong><br>
+        <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}" target="_blank">Share on X</a> |
+        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}" target="_blank">Share on LinkedIn</a>
       </div>
-
-      {% if page.source %}
-        <p class="post-source">Source: <a href="{{ page.source }}" target="_blank" rel="noopener">{{ page.source }}</a></p>
-      {% endif %}
-
-      <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
     </article>
+
+    <!-- Posts relacionados -->
+    {% assign related = site.posts | where: "tag", page.tag | where_exp: "post", "post.url != page.url" | slice: 0, 3 %}
+    {% if related.size > 0 %}
+      <section style="margin-top: 40px;">
+        <h3>Related Posts</h3>
+        <ul class="post-list">
+          {% for post in related %}
+            <li class="post-item">
+              <a href="{{ post.url | relative_url }}">{{ post.title }}</a><br>
+              <span class="post-meta">{{ post.date | date: "%B %d, %Y" }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
   </main>
 
   <footer>
