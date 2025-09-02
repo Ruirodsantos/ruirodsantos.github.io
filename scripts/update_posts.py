@@ -5,7 +5,10 @@ from slugify import slugify
 
 # Configura o endpoint da API
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWSDATA_API_KEY")
+API_KEY = os.getenv("NEWS_API_KEY")
+
+if not API_KEY:
+    raise ValueError("❌ API_KEY não encontrada. Verifica o nome da variável de ambiente.")
 
 # Palavras-chave que queremos seguir
 KEYWORDS = ["artificial intelligence", "machine learning", "AI", "AGI"]
