@@ -1,39 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Discovery Blog</title>
-    <link rel="stylesheet" href="/assets/style.css" />
-  </head>
-  <body>
-    <header>
-      <h1>🧠 AI Discovery Blog</h1>
-      <p>Discover the latest tools, breakthroughs & trends in Artificial Intelligence.</p>
-      <nav>
-        <a href="/">Home</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-      </nav>
-    </header>
+---
+layout: default
+title: AI Discovery Blog
+---
 
-    <main>
-      <h2>Latest Posts</h2>
-      {% for post in site.posts %}
-        <article>
-          {% if post.image %}
-            <img src="{{ post.image }}" alt="Thumbnail for {{ post.title }}" style="max-width: 100%; height: auto; margin-top: 1rem;" />
-          {% endif %}
-          <h3><a href="{{ post.url }}">{{ post.title }}</a></h3>
-          <p><span role="img" aria-label="calendar">📅</span> {{ post.date | date: "%B %d, %Y" }}</p>
-          <p>{{ post.excerpt | strip_html | truncatewords: 30 }}</p>
-        </article>
-        <hr />
-      {% endfor %}
-    </main>
+<h2>Latest Posts</h2>
 
-    <footer>
-      <p>© {{ site.time | date: '%Y' }} AI Discovery Blog. All rights reserved.</p>
-    </footer>
-  </body>
-</html>
+<ul class="post-list">
+  {% for post in site.posts %}
+    <li class="post-item">
+      {% if post.image %}
+        <a href="{{ post.url }}">
+          <img src="{{ post.image }}" alt="Thumbnail for {{ post.title }}" class="post-thumbnail" />
+        </a>
+      {% endif %}
+
+      <h3><a href="{{ post.url }}">{{ post.title }}</a></h3>
+
+      <p class="post-meta">
+        📅 {{ post.date | date: "%B %d, %Y" }}
+      </p>
+
+      <p class="post-excerpt">
+        {{ post.excerpt | strip_html | truncatewords: 30 }}
+      </p>
+
+      <hr />
+    </li>
+  {% endfor %}
+</ul>
