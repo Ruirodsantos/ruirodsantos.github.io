@@ -47,6 +47,32 @@ a {
   color: #0056cc;
   text-decoration: none;
 }
+.post-list {
+  list-style: none;
+  padding: 0;
+}
+
+.post-item {
+  margin-bottom: 2rem;
+}
+
+.post-thumbnail {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.post-meta {
+  color: #555;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+}
+
+.post-excerpt {
+  color: #333;
+  font-size: 1rem;
+}
 
 a:hover {
   text-decoration: underline;
