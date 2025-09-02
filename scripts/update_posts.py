@@ -30,7 +30,7 @@ def fetch_post():
         raise ValueError("Resposta inválida da API: \n" + str(data))
 
     for article in data["results"]:
-        if article.get("title") and article.get("description"):
+        if isinstance(article, dict) and article.get("title") and article.get("description"):
             return article
 
     raise ValueError("Nenhum artigo válido encontrado")
@@ -40,6 +40,8 @@ def generate_post_content(article):
     slug = slugify(article['title'])[:50]
     filename = f"{POSTS_FOLDER}/{date}-{slug}.md"
 
+    content_body = article['content'] if isinstance(article.get('content'), str) else article['description']
+
     content = f"""---
 title: "{article['title']}"
 date: {date}
@@ -47,9 +49,9 @@ excerpt: "{article['description']}"
 categories: [ai, news]
 ---
 
-Source: [{article['source_id']}]({article['link']})
+Source: [{article.get('source_id', 'source')}]({article.get('link', '#')})
 
-{article.get('content') or article['description']}
+{content_body}
 """
     return filename, content.strip()
 
