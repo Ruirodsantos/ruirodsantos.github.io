@@ -1,7 +1,7 @@
 name: Auto Update Blog
 
 on:
-  workflow_dispatch:  # Executa manualmente
+  workflow_dispatch:  # Permite executar manualmente
 
 jobs:
   update:
@@ -22,8 +22,8 @@ jobs:
 
       - name: Run blog update script
         run: |
-          python scripts/update_posts.py > script_output.log
-          cat script_output.log
+          echo "🔍 Running update_posts.py..."
+          python scripts/update_posts.py || (echo '❌ Script failed'; exit 1)
 
       - name: Commit and push changes
         run: |
