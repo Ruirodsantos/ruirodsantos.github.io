@@ -29,7 +29,15 @@ def fetch_post():
     if "results" not in data:
         raise ValueError("Resposta inválida da API: \n" + str(data))
 
-    for article in data["results"]:
+    print(f"🔍 Total de artigos recebidos: {len(data['results'])}")
+
+    for i, article in enumerate(data["results"]):
+        print(f"\n🔎 Artigo {i+1}:")
+        print(f"Título: {article.get('title')}")
+        print(f"Descrição: {article.get('description')}")
+        print(f"Fonte: {article.get('source_id')}")
+        print(f"Link: {article.get('link')}")
+
         if isinstance(article, dict) and article.get("title") and article.get("description"):
             return article
 
@@ -64,9 +72,9 @@ def main():
         article = fetch_post()
         filename, content = generate_post_content(article)
         save_post(filename, content)
-        print(f"✅ Post criado: {filename}")
+        print(f"\n✅ Post criado: {filename}")
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"\n❌ Erro: {e}")
         exit(1)
 
 if __name__ == "__main__":
