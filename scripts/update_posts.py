@@ -1,6 +1,7 @@
 import requests
 import datetime
 import os
+from slugify import slugify
 
 # Configura o endpoint da API
 API_URL = "https://newsdata.io/api/1/news"
@@ -36,11 +37,10 @@ def fetch_post():
 
 def generate_post_content(article):
     date = datetime.datetime.utcnow().date()
-    slug = article['title'].lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
+    slug = slugify(article['title'])[:50]
     filename = f"{POSTS_FOLDER}/{date}-{slug}.md"
 
-    content = f"""
----
+    content = f"""---
 title: "{article['title']}"
 date: {date}
 excerpt: "{article['description']}"
@@ -49,13 +49,12 @@ categories: [ai, news]
 
 Source: [{article['source_id']}]({article['link']})
 
-{article['content'] or article['description']}
+{article.get('content') or article['description']}
 """
-
     return filename, content.strip()
 
 def save_post(filename, content):
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         f.write(content)
 
 def main():
