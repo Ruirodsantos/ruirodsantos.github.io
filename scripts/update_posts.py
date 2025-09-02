@@ -1,32 +1,72 @@
-name: Auto Update Blog
+import requests
+import datetime
+import os
 
-on:
-  workflow_dispatch:
+# Configura o endpoint da API
+API_URL = "https://newsdata.io/api/1/news"
+API_KEY = os.getenv("NEWSDATA_API_KEY")
 
-jobs:
-  update:
-    runs-on: ubuntu-latest
+# Palavras-chave que queremos seguir
+KEYWORDS = ["artificial intelligence", "machine learning", "AI", "AGI"]
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+# Garante que temos a pasta de posts
+POSTS_FOLDER = "_posts"
+os.makedirs(POSTS_FOLDER, exist_ok=True)
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
+def fetch_post():
+    query = " OR ".join(KEYWORDS)
+    params = {
+        "apikey": API_KEY,
+        "q": query,
+        "language": "en",
+        "country": "us",
+        "category": "technology"
+    }
+    res = requests.get(API_URL, params=params)
+    data = res.json()
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+    if "results" not in data:
+        raise ValueError("Resposta inválida da API: \n" + str(data))
 
-      - name: Run blog update script
-        run: |
-          python scripts/update_posts.py
+    for article in data["results"]:
+        if article.get("title") and article.get("description"):
+            return article
 
-      - name: Commit and push changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Update blog posts" || echo "No changes to commit"
-          git push
+    raise ValueError("Nenhum artigo válido encontrado")
+
+def generate_post_content(article):
+    date = datetime.datetime.utcnow().date()
+    slug = article['title'].lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
+    filename = f"{POSTS_FOLDER}/{date}-{slug}.md"
+
+    content = f"""
+---
+title: "{article['title']}"
+date: {date}
+excerpt: "{article['description']}"
+categories: [ai, news]
+---
+
+Source: [{article['source_id']}]({article['link']})
+
+{article['content'] or article['description']}
+"""
+
+    return filename, content.strip()
+
+def save_post(filename, content):
+    with open(filename, "w") as f:
+        f.write(content)
+
+def main():
+    try:
+        article = fetch_post()
+        filename, content = generate_post_content(article)
+        save_post(filename, content)
+        print(f"✅ Post criado: {filename}")
+    except Exception as e:
+        print(f"❌ Erro: {e}")
+        exit(1)
+
+if __name__ == "__main__":
+    main()
