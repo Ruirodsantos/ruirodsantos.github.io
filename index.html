@@ -1,30 +1,47 @@
----
-layout: default
-title: AI Discovery Blog
----
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ page.title }}</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header>
+    <h1><a href="{{ '/' | relative_url }}">🧠 {{ site.title }}</a></h1>
+    <nav>
+      <a href="{{ '/' | relative_url }}">Home</a> |
+      <a href="{{ '/about.html' | relative_url }}">About</a> |
+      <a href="{{ '/contact.html' | relative_url }}">Contact</a>
+    </nav>
+  </header>
 
-<h2>Latest Posts</h2>
+  <main>
+    <ins class="adsbygoogle"
+         style="display:block; text-align:center; margin-bottom: 20px;"
+         data-ad-client="ca-pub-7715134134171575"
+         data-ad-slot="1234567890"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
 
-<ul class="post-list">
-  {% for post in site.posts %}
-    <li class="post-item">
-      {% if post.image %}
-        <a href="{{ post.url }}">
-          <img src="{{ post.image }}" alt="Thumbnail for {{ post.title }}" class="post-thumbnail" />
-        </a>
+    <article>
+      <h2>{{ page.title }}</h2>
+      <p><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</p>
+
+      {% if page.image %}
+        <img src="{{ page.image }}" alt="{{ page.title }}" class="post-thumbnail" />
       {% endif %}
 
-      <h3><a href="{{ post.url }}">{{ post.title }}</a></h3>
+      {{ content }}
+    </article>
+    <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
+  </main>
 
-      <p class="post-meta">
-        📅 {{ post.date | date: "%B %d, %Y" }}
-      </p>
-
-      <p class="post-excerpt">
-        {{ post.excerpt | strip_html | truncatewords: 30 }}
-      </p>
-
-      <hr />
-    </li>
-  {% endfor %}
-</ul>
+  <footer>
+    <p>&copy; {{ "now" | date: "%Y" }} {{ site.title }} | Powered by Adventis</p>
+  </footer>
+</body>
+</html>
