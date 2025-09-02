@@ -22,7 +22,7 @@ jobs:
 
       - name: Run blog update script
         run: |
-          python generate_ai_posts.py > script_output.log
+          python scripts/update_posts.py > script_output.log
           cat script_output.log
 
       - name: Commit and push changes
