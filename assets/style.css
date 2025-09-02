@@ -77,3 +77,33 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+.post-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.post-meta {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.post-image {
+  width: 100%;
+  margin: 20px 0;
+  border-radius: 8px;
+}
+
+.post-content p {
+  line-height: 1.6;
+  font-size: 1.05rem;
+  margin-bottom: 1rem;
+}
+
+.post-source {
+  font-size: 0.9rem;
+  color: #777;
+  margin-top: 2rem;
+}
