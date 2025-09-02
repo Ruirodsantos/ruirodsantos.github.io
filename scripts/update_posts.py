@@ -1,72 +1,68 @@
-import os
 import requests
+import os
 from datetime import datetime
 from slugify import slugify
 
-# Diretório dos posts
 POSTS_DIR = "_posts"
 
-# Elimina todos os posts de 2025-06-13 em diante
-def delete_old_posts():
+def fetch_post():
+    url = "https://huggingface.co/api/spaces/yuntian-deng/ChatGPT"
+    res = requests.get(url)
+
+    try:
+        data = res.json()
+    except Exception as e:
+        raise ValueError(f"Erro ao interpretar JSON: {e}\nResposta: {res.text}")
+
+    if 'data' not in data or not data['data']:
+        raise KeyError(f"Nenhum conteúdo encontrado na resposta da API:\n{data}")
+
+    article = data['data'][0]
+    return article
+
+def get_existing_dates():
+    dates = []
     for filename in os.listdir(POSTS_DIR):
         if filename.endswith(".md"):
-            date_str = filename.split("-")[0:3]
-            date = "-".join(date_str)
-            if date >= "2025-06-13":
-                os.remove(os.path.join(POSTS_DIR, filename))
-                print(f"❌ Apagado: {filename}")
+            try:
+                date_str = filename.split("-")[0:3]
+                date_str = "-".join(date_str)
+                dates.append(date_str)
+            except Exception:
+                continue
+    return sorted(set(dates))
 
-# Gera conteúdo dividido em excerto + artigo completo
-def fetch_post():
-    res = requests.get("https://api.thenewsapi.com/v1/news/all?api_token=demo&language=en&limit=1&categories=tech")
-    article = res.json()['data'][0]
+def save_post(article, date):
+    title = article["title"]
+    content = article["content"]
 
-    title = article['title']
-    date = datetime.today().strftime('%Y-%m-%d')
-    slug = slugify(title)
-    url = article['url']
-    description = article['description'] or "Read more at the source."
+    filename = f"{date}-{slugify(title)}.md"
+    filepath = os.path.join(POSTS_DIR, filename)
 
-    # Texto extra
-    full_text = f"""
-Apple has once again stirred the tech world with the announcement of its M5 chip series.
-Industry experts suggest the M5 Max may surpass even high-end desktop CPUs. 
-The design remains faithful to the minimalism Apple is known for, but inside, it’s a beast.
-Early benchmarks hint at massive GPU improvements, ideal for creatives and developers alike.
+    if os.path.exists(filepath):
+        print(f"Post já existe: {filepath}")
+        return
 
-Read the full original source here: [{url}]({url})
-"""
-    return {
-        "title": title,
-        "slug": slug,
-        "date": date,
-        "excerpt": description,
-        "full_text": full_text
-    }
+    with open(filepath, "w") as f:
+        f.write(f"---\nlayout: post\ntitle: \"{title}\"\n---\n\n")
+        f.write(content)
 
-# Cria novo post com excerto e corpo
-def create_post(post):
-    filename = f"{post['date']}-{post['slug']}.md"
-    path = os.path.join(POSTS_DIR, filename)
+    print(f"Post guardado: {filepath}")
 
-    with open(path, "w") as f:
-        f.write(f"""---
-layout: post
-title: "{post['title']}"
-date: {post['date']}
-excerpt: >-
-  {post['excerpt']}
----
+def main():
+    today = datetime.now().strftime("%Y-%m-%d")
+    existing_dates = get_existing_dates()
 
-{post['full_text']}
-""")
-    print(f"✅ Criado: {filename}")
+    if today in existing_dates:
+        print(f"Já existe post para hoje ({today}) — nada feito.")
+        return
+
+    try:
+        article = fetch_post()
+        save_post(article, today)
+    except Exception as e:
+        print(f"Erro ao gerar o post: {e}")
+        exit(1)
 
 if __name__ == "__main__":
-    delete_old_posts()
-
-    for _ in range(2):  # cria 2 posts
-        post = fetch_post()
-        create_post(post)
-
-    print("\n🚀 Blog atualizado com novos conteúdos completos!")
+    main()
