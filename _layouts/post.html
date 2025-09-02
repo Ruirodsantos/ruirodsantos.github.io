@@ -3,15 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <title>{{ page.title }}</title>
-  <!-- Caminho do CSS corrigido -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/assets/style.css">
-  <!-- AdSense Script no head -->
+
+  <!-- AdSense Script -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575"
      crossorigin="anonymous"></script>
 </head>
 <body>
   <header>
     <h1><a href="{{ '/' | relative_url }}">🧠 {{ site.title }}</a></h1>
+    <p>{{ site.description }}</p>
     <nav>
       <a href="{{ '/' | relative_url }}">Home</a> |
       <a href="{{ '/about.html' | relative_url }}">About</a> |
@@ -19,8 +21,8 @@
     </nav>
   </header>
 
-  <main>
-    <!-- Bloco de anúncio antes do conteúdo -->
+  <main class="post-page">
+    <!-- Bloco de anúncio -->
     <ins class="adsbygoogle"
          style="display:block; text-align:center; margin-bottom: 20px;"
          data-ad-client="ca-pub-7715134134171575"
@@ -33,10 +35,24 @@
 
     <article>
       <h2>{{ page.title }}</h2>
-      <p><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</p>
-      {{ content }}
+      <p class="post-meta">
+        <strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}
+      </p>
+
+      {% if page.image %}
+        <img src="{{ page.image }}" alt="Post image" class="post-image">
+      {% endif %}
+
+      <div class="post-content">
+        {{ content }}
+      </div>
+
+      {% if page.source %}
+        <p class="post-source">Source: <a href="{{ page.source }}" target="_blank" rel="noopener">{{ page.source }}</a></p>
+      {% endif %}
+
+      <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
     </article>
-    <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
   </main>
 
   <footer>
