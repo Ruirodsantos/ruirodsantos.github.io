@@ -1,60 +1,72 @@
-# Script para atualizar os posts do blog Jekyll
 import os
-import datetime
+import requests
+from datetime import datetime
+from slugify import slugify
 
-# Caminho para a pasta _posts
+# Diretório dos posts
 POSTS_DIR = "_posts"
 
-# Lista de arquivos a manter manualmente (posts antigos até 2025-06-13)
-KEEP_DATES = [
-    "2025-06-04",
-    "2025-06-05",
-    "2025-06-06",
-    "2025-06-07",
-    "2025-06-08",
-    "2025-06-09",
-    "2025-06-10",
-    "2025-06-11",
-    "2025-06-12",
-    "2025-06-13",
-]
+# Elimina todos os posts de 2025-06-13 em diante
+def delete_old_posts():
+    for filename in os.listdir(POSTS_DIR):
+        if filename.endswith(".md"):
+            date_str = filename.split("-")[0:3]
+            date = "-".join(date_str)
+            if date >= "2025-06-13":
+                os.remove(os.path.join(POSTS_DIR, filename))
+                print(f"❌ Apagado: {filename}")
 
-# Apaga os posts do dia 2025-08-31
-for filename in os.listdir(POSTS_DIR):
-    if filename.startswith("2025-08-31"):
-        os.remove(os.path.join(POSTS_DIR, filename))
+# Gera conteúdo dividido em excerto + artigo completo
+def fetch_post():
+    res = requests.get("https://api.thenewsapi.com/v1/news/all?api_token=demo&language=en&limit=1&categories=tech")
+    article = res.json()['data'][0]
 
-# Posts que vamos adicionar:
-posts = [
-    {
-        "date": "2025-08-31",
-        "title": "Meta vs Google: Will Meta Catch Search Supremacy?",
-        "body": "Meta Platforms could overtake Google in digital ad revenue by 2026, according to Bernstein analysts. With rapid advancements in AI and a more engaged user base on platforms like Instagram and Threads, Meta is gaining ground fast."
-    },
-    {
-        "date": datetime.date.today().strftime("%Y-%m-%d"),
-        "title": "September 1st AI Highlights: OpenAI's New Agent is Coming",
-        "body": "OpenAI is rumored to be releasing a new agent model this September. While details are scarce, insiders suggest the agent could combine planning, tool use, and real-time task execution with GPT-5 level reasoning."
+    title = article['title']
+    date = datetime.today().strftime('%Y-%m-%d')
+    slug = slugify(title)
+    url = article['url']
+    description = article['description'] or "Read more at the source."
+
+    # Texto extra
+    full_text = f"""
+Apple has once again stirred the tech world with the announcement of its M5 chip series.
+Industry experts suggest the M5 Max may surpass even high-end desktop CPUs. 
+The design remains faithful to the minimalism Apple is known for, but inside, it’s a beast.
+Early benchmarks hint at massive GPU improvements, ideal for creatives and developers alike.
+
+Read the full original source here: [{url}]({url})
+"""
+    return {
+        "title": title,
+        "slug": slug,
+        "date": date,
+        "excerpt": description,
+        "full_text": full_text
     }
-]
 
-# Função para criar o conteúdo em Markdown
+# Cria novo post com excerto e corpo
 def create_post(post):
-    filename = f"{post['date']}-{post['title'].lower().replace(' ', '-').replace(':', '').replace('?', '').replace("'", '').replace(',', '').replace('.', '')}.md"
-    filepath = os.path.join(POSTS_DIR, filename)
+    filename = f"{post['date']}-{post['slug']}.md"
+    path = os.path.join(POSTS_DIR, filename)
 
-    with open(filepath, "w") as f:
-        f.write("""---
+    with open(path, "w") as f:
+        f.write(f"""---
 layout: post
-title: \"{title}\"
-date: {date}
+title: "{post['title']}"
+date: {post['date']}
+excerpt: >-
+  {post['excerpt']}
 ---
 
-{body}
-""".format(title=post['title'], date=post['date'], body=post['body']))
+{post['full_text']}
+""")
+    print(f"✅ Criado: {filename}")
 
-# Criação dos novos posts
-for post in posts:
-    create_post(post)
+if __name__ == "__main__":
+    delete_old_posts()
 
-print("✔️ Posts atualizados com sucesso.")
+    for _ in range(2):  # cria 2 posts
+        post = fetch_post()
+        create_post(post)
+
+    print("\n🚀 Blog atualizado com novos conteúdos completos!")
