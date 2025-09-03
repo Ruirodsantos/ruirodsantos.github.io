@@ -3,6 +3,7 @@ layout: default
 title: AI Discovery Blog
 ---
 
+<!-- HERO -->
 <section style="max-width: 980px; margin: 0 auto; padding: 2rem 1rem;">
   <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.2rem; align-items: center;">
     <div>
@@ -16,20 +17,35 @@ title: AI Discovery Blog
         <em>Tip:</em> Click any headline to read the summary and source link.
       </p>
     </div>
+
     <div>
-      <img src="{{ '/assets/ai-hero.jpg' | relative_url }}" alt="AI Discovery" style="width:100%; border-radius:12px; display:block;">
+      <!-- Hero local com relative_url -->
+      <img
+        src="{{ '/assets/ai-hero.svg' | relative_url }}"
+        alt="AI Discovery"
+        style="width:100%; border-radius:12px; display:block;"
+      >
     </div>
   </div>
 </section>
 
+<!-- POSTS LIST -->
 <section style="max-width: 980px; margin: 0 auto; padding: 0 1rem 2rem;">
   <ul class="post-list">
     {% for post in site.posts %}
       <li class="post-item">
-        {% assign thumb = post.image | default: '/assets/og-default.jpg' | relative_url %}
-        <a href="{{ post.url | relative_url }}">
-          <img class="post-thumbnail" src="{{ thumb }}" alt="{{ post.title }}">
-        </a>
+        {% assign has_http = post.image | default:'' %}
+        {% if post.image and has_http contains '://' %}
+          <!-- Imagem absoluta (deixa como está) -->
+          <a href="{{ post.url | relative_url }}">
+            <img class="post-thumbnail" src="{{ post.image }}" alt="{{ post.title }}">
+          </a>
+        {% else %}
+          <!-- Fallback local se não houver imagem -->
+          <a href="{{ post.url | relative_url }}">
+            <img class="post-thumbnail" src="{{ (post.image | default:'/assets/ai-hero.svg') | relative_url }}" alt="{{ post.title }}">
+          </a>
+        {% endif %}
 
         <h2 style="margin: 0.2rem 0 0.2rem;">
           <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
