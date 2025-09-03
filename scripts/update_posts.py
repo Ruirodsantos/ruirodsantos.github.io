@@ -2,281 +2,305 @@
 # -*- coding: utf-8 -*-
 
 """
-Generate daily AI blog posts from Newsdata.io
+Generate daily blog posts from Newsdata.io with quality filtering.
 
-Environment:
-  - NEWS_API_KEY (preferred) or NEWSDATA_API_KEY
-
-Behavior:
-  - Fetches recent AI news
-  - Filters out low-quality or off-topic items
-  - Expands short items into readable summaries
-  - Creates up to MAX_POSTS markdown files in _posts/
+- Pulls 1–2 pages (without sending page=1 on the first request).
+- Retries once without 'category' if Newsdata returns 422 (pagination quirk).
+- Creates up to MAX_POSTS posts in _posts/.
+- Skips low-quality or off-topic items.
 """
+
+from __future__ import annotations
 
 import os
 import re
 import json
 import time
+import html
+import shutil
+import string
 import datetime as dt
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import requests
 from slugify import slugify
 
-# --------------------------- Configuration -------------------------------- #
+# ========= Configuration =========
 
 API_URL = "https://newsdata.io/api/1/news"
+
+# Read API key from either env var name
 API_KEY = os.getenv("NEWS_API_KEY") or os.getenv("NEWSDATA_API_KEY")
+if not API_KEY:
+    raise ValueError("❌ API_KEY not found. Set NEWS_API_KEY (or NEWSDATA_API_KEY) in repo secrets/variables.")
 
-POSTS_DIR = "_posts"
+# Query and filtering
+KEYWORDS = [
+    "artificial intelligence",
+    "AI",
+    "machine learning",
+    "generative AI",
+    "openai",
+    "anthropic",
+    "google ai",
+    "meta ai",
+    "llm",
+]
+
+QUERY = " OR ".join(KEYWORDS)
+LANGUAGE = "en"
+CATEGORY = "technology"  # we will drop it on retry if 422 happens
+
+# Post generation
 MAX_POSTS = 5
+POSTS_DIR = Path("_posts")
+POSTS_DIR.mkdir(exist_ok=True)
 
-# Query — keep broad but relevant
-QUERY = (
-    "artificial intelligence OR ai OR machine learning OR generative ai "
-    "OR openai OR anthropic OR google ai OR meta ai OR llm"
-)
+MIN_DESC_CHARS = 140           # skip entries with too little text
+MIN_UNIQUE_WORDS = 20          # rough quality gate
+RECENT_WINDOW_HOURS = 48       # only keep last 48h
 
-# Language/category – keep simple to avoid 422s from the API
+# Basic stop-terms to avoid sport/broadcast/program listings, paywalls, etc.
+LOW_QUALITY_MARKERS = [
+    "ONLY AVAILABLE IN PAID PLANS",
+    "subscription required",
+    "paywall",
+    "watch live",
+    "broadcasts",
+    "fixture",
+    "br 25", "premier league", "bundesliga",
+    "rangers x celtic",
+]
+
+# ========= Utilities =========
+
+def now_utc() -> dt.datetime:
+    return dt.datetime.now(dt.timezone.utc)
+
+def parse_pubdate(s: Optional[str]) -> Optional[dt.datetime]:
+    if not s:
+        return None
+    # Newsdata pubDate examples: "2025-09-02 19:21:00"
+    # Assume it is UTC-like without timezone; parse naïvely then set UTC
+    try:
+        dt_naive = dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+        return dt_naive.replace(tzinfo=dt.timezone.utc)
+    except Exception:
+        return None
+
+def strip_html(x: str) -> str:
+    # remove basic HTML tags
+    x = re.sub(r"<br\s*/?>", " ", x, flags=re.I)
+    x = re.sub(r"<.*?>", "", x, flags=re.S)
+    x = html.unescape(x)
+    return x.strip()
+
+def safe_excerpt(text: str, limit_words: int = 50) -> str:
+    words = text.split()
+    if len(words) <= limit_words:
+        return text
+    return " ".join(words[:limit_words]).rstrip(",.;:") + "…"
+
+def text_quality_ok(title: str, desc: str) -> bool:
+    t = f"{title}\n{desc}".lower()
+    if any(m.lower() in t for m in LOW_QUALITY_MARKERS):
+        return False
+    if len(desc) < MIN_DESC_CHARS:
+        return False
+    uniq = set(w.strip(string.punctuation).lower() for w in desc.split())
+    uniq = {w for w in uniq if w}
+    if len(uniq) < MIN_UNIQUE_WORDS:
+        return False
+    return True
+
+def load_existing_titles_and_links() -> tuple[set[str], set[str]]:
+    titles: set[str] = set()
+    links: set[str] = set()
+    for p in POSTS_DIR.glob("*.md"):
+        try:
+            txt = p.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        # very light-weight YAML scan for title/link
+        m_title = re.search(r'^title:\s*"(.*)"\s*$', txt, flags=re.M)
+        m_source = re.search(r"^source:\s*(.+?)\s*$", txt, flags=re.M)
+        if m_title:
+            titles.add(m_title.group(1).strip())
+        if m_source:
+            links.add(m_source.group(1).strip())
+    return titles, links
+
+# ========= API calling (robust) =========
+
 BASE_PARAMS = {
     "q": QUERY,
-    "language": "en",
-    "category": "technology",
-    "page": 1,
+    "language": LANGUAGE,
+    "category": CATEGORY,   # will be removed on retry if 422
+    # DO NOT include 'page' here; we only add it for page>1
 }
-
-# Quality filters
-MIN_DESC_WORDS = 20
-BANNED_PHRASES = {
-    "only available in paid plans",
-    "subscription required",
-    "subscribe to read",
-}
-# Obvious off-topic filters (you can expand this list any time)
-OFFTOPIC_PATTERNS = re.compile(
-    r"\b(football|soccer|bundesliga|premier league|nfl|nba|mlb|tennis|f1|cricket|match|fixture)\b",
-    re.IGNORECASE,
-)
-
-# -------------------------------------------------------------------------- #
-
-
-def fail(msg: str) -> None:
-    print(f"❌ {msg}")
-    raise SystemExit(1)
-
-
-def log(msg: str) -> None:
-    print(f"🧠 {msg}")
-
-
-def ensure_api_key() -> None:
-    if not API_KEY:
-        fail("API_KEY not found. Set NEWS_API_KEY (or NEWSDATA_API_KEY) in repo variables/secrets.")
-
-
-def ensure_posts_dir() -> None:
-    os.makedirs(POSTS_DIR, exist_ok=True)
-
 
 def call_api(params: Dict) -> Dict:
-    """Call Newsdata.io and return JSON, raising on HTTP errors."""
-    url = API_URL
-    p = dict(params)
-    p["apikey"] = API_KEY
+    """
+    Call Newsdata.io and return JSON.
+    - Don't send page=1 (omit page for first call).
+    - If 422, retry once with category removed and page removed.
+    """
+    def _do_call(q: Dict) -> requests.Response:
+        q = dict(q)
+        q["apikey"] = API_KEY
+        if q.get("page") == 1:
+            q.pop("page", None)
+        return requests.get(API_URL, params=q, timeout=30)
 
-    resp = requests.get(url, params=p, timeout=30)
-    # Show a helpful message if the API returns 422 (common for invalid combos)
-    try:
+    resp = _do_call(params)
+    if resp.status_code == 422:
+        # Retry once with no 'category' and no 'page'
+        p2 = dict(params)
+        p2.pop("category", None)
+        p2.pop("page", None)
+        resp = _do_call(p2)
+
+    # If still not ok, raise
+    if not resp.ok:
+        # Log some help text if provider returns JSON error
+        try:
+            data = resp.json()
+            print(f"⚠️ API error ({resp.status_code}): {json.dumps(data)}")
+        except Exception:
+            print(f"⚠️ API error ({resp.status_code}): {resp.text[:500]}")
         resp.raise_for_status()
-    except requests.HTTPError as e:
-        log(f"API error ({resp.status_code}): {resp.text[:300]}")
-        raise
-    data = resp.json()
-    return data
 
+    return resp.json()
 
 def fetch_latest(limit: int = MAX_POSTS) -> List[Dict]:
     """
-    Fetch a few fresh items. Keep the request simple:
-    - no date filters (Newsdata 422s easily with tight filters)
+    Fetch recent items (up to ~2 pages) and return raw result dicts.
     """
     items: List[Dict] = []
-    params = dict(BASE_PARAMS)
+    base = dict(BASE_PARAMS)
 
-    # We’ll try up to 2 pages to collect enough items
     for page in (1, 2):
-        params["page"] = page
+        params = dict(base)
+        if page > 1:
+            params["page"] = page
         data = call_api(params)
         results = data.get("results") or data.get("data") or []
         if not results:
             break
         items.extend(results)
-        if len(items) >= limit:
+        if len(items) >= (limit * 2):
             break
-
-        # be nice to the API
         time.sleep(1.0)
 
-    return items[:limit * 2]  # return a bit more for filtering headroom
+    return items
 
+# ========= Post building =========
 
-def is_offtopic(title: str, desc: str) -> bool:
-    text = f"{title} {desc}"
-    return bool(OFFTOPIC_PATTERNS.search(text))
+def choose_image(r: Dict) -> Optional[str]:
+    # Prefer image_url; fallback to any plausible field
+    cand = r.get("image_url") or r.get("image") or r.get("image_link")
+    if cand and cand.lower().startswith(("http://", "https://")):
+        return cand
+    return None
 
-
-def bad_content(title: str, desc: str, content: str) -> bool:
-    """Return True if the item is obviously low-quality/junk."""
-    if not title.strip():
-        return True
-    if desc and title.strip().lower() == desc.strip().lower():
-        return True
-    if len((desc or "").split()) < MIN_DESC_WORDS:
-        return True
-    joined = " ".join([title, desc or "", content or ""]).lower()
-    if any(ph in joined for ph in BANNED_PHRASES):
-        return True
-    return False
-
-
-def expand_text(title: str, desc: str, source: Optional[str]) -> str:
+def build_post_md(item: Dict) -> Optional[str]:
     """
-    Create a readable 2–3 paragraph summary using only local heuristics.
-    This avoids external AI calls (safe inside Actions).
+    Turn a raw Newsdata item into a Markdown string (with YAML front matter).
+    Returns None if fails quality gates.
     """
-    clean_title = title.strip().rstrip(".")
-    clean_desc = (desc or "").strip()
+    title = (item.get("title") or "").strip()
+    link = (item.get("link") or "").strip()
+    desc = strip_html(item.get("description") or item.get("content") or "")
+    title = title.replace("\n", " ").strip()
 
-    p1 = clean_desc
-
-    p2 = (
-        f"This update around **{clean_title}** reflects a broader trend in the rapid adoption "
-        f"of artificial intelligence across industries. Analysts note that developments like "
-        f"these often influence investment priorities, product roadmaps, and the competitive "
-        f"landscape for both startups and large platforms."
-    )
-
-    src_part = f" the original source ({source})" if source else " the original source"
-    p3 = (
-        f"For readers following AI closely, the key takeaways are practical: watch for follow-up "
-        f"announcements, early pilot programs, and measurable outcomes over the next few quarters. "
-        f"More details may emerge as organizations publish technical posts, earnings notes, or third-party reviews at{src_part}."
-    )
-
-    return f"{p1}\n\n{p2}\n\n{p3}"
-
-
-def unique_filepath(date: dt.date, title: str) -> str:
-    base_slug = slugify(title)[:60] or f"post-{int(time.time())}"
-    fname = f"{date.isoformat()}-{base_slug}.md"
-    path = os.path.join(POSTS_DIR, fname)
-
-    # Avoid overwriting if file exists
-    if not os.path.exists(path):
-        return path
-
-    # Add a short counter suffix
-    for i in range(2, 100):
-        alt = os.path.join(POSTS_DIR, f"{date.isoformat()}-{base_slug}-{i}.md")
-        if not os.path.exists(alt):
-            return alt
-
-    # Fallback (extremely unlikely)
-    return os.path.join(POSTS_DIR, f"{date.isoformat()}-{base_slug}-{int(time.time())}.md")
-
-
-def build_markdown(article: Dict) -> Optional[str]:
-    """
-    Return the markdown string for a valid article, or None if it should be skipped.
-    """
-    title = (article.get("title") or "").strip()
-    desc = (article.get("description") or "").strip()
-    content = (article.get("content") or "").strip()
-    link = article.get("link") or article.get("url") or ""
-    source = article.get("source_id") or (article.get("source") or {}).get("name") or ""
-    image = article.get("image_url") or article.get("image")
-
-    if is_offtopic(title, desc):
+    if not title or not link or not desc:
         return None
-    if bad_content(title, desc, content):
+    if not text_quality_ok(title, desc):
         return None
 
-    # Expand thin content if needed
-    if not content or len(content) < 300:
-        content = expand_text(title, desc, link)
+    # Keep recent only
+    pub = parse_pubdate(item.get("pubDate"))
+    if not pub:
+        pub = now_utc()
+    if (now_utc() - pub).total_seconds() > RECENT_WINDOW_HOURS * 3600:
+        return None
 
-    # Front matter
-    today = dt.date.today()
-    fm = {
-        "layout": "post",
-        "title": title.replace('"', "'"),
-        "date": today.isoformat(),
-        "excerpt": (desc or "").replace('"', "'"),
-        "categories": ["ai", "news"],
-    }
+    image = choose_image(item)
+    excerpt = safe_excerpt(desc, 60)
+    source_id = item.get("source_id") or ""
+
+    # YAML front matter
+    fm = [
+        "---",
+        'layout: post',
+        f'title: "{title.replace(\'"\', \'\\\"\')}"',
+        f"date: {pub.date().isoformat()}",
+    ]
     if image:
-        fm["image"] = image
-
-    # Build markdown
-    front_matter = (
-        "---\n" + "\n".join(
-            [
-                f'layout: {fm["layout"]}',
-                f'title: "{fm["title"]}"',
-                f'date: {fm["date"]}',
-                f'excerpt: "{fm["excerpt"]}"',
-                "categories: [ai, news]",
-            ]
-            + ([f"image: {image}"] if image else [])
-        ) + "\n---\n\n"
-    )
+        fm.append(f'image: "{image}"')
+    if source_id:
+        fm.append(f"source: {source_id}")
+    fm.extend([
+        "tags: [ai, news]",
+        "---",
+    ])
 
     body_parts = []
-    if link or source:
-        src_line = f"Source: [{source or 'link'}]({link})" if link else f"Source: {source}"
-        body_parts.append(src_line)
-        body_parts.append("")  # blank line
+    if image:
+        body_parts.append(f'![{title}]({image})\n')
 
-    body_parts.append(content.strip())
+    body_parts.append(excerpt + "\n")
+    body_parts.append(f"\nSource: [{source_id or 'source'}]({link})\n")
 
-    md = front_matter + "\n".join(body_parts).strip() + "\n"
-    return md
+    return "\n".join(fm) + "\n\n" + "\n".join(body_parts).strip() + "\n"
 
+def save_post_md(title: str, pub: dt.datetime, content: str) -> Path:
+    slug = slugify(title)[:60] or "post"
+    filename = f"{pub.date().isoformat()}-{slug}.md"
+    path = POSTS_DIR / filename
+    # Avoid overwriting by suffixing number if exists
+    i = 2
+    while path.exists():
+        path = POSTS_DIR / f"{pub.date().isoformat()}-{slug}-{i}.md"
+        i += 1
+    path.write_text(content, encoding="utf-8")
+    return path
+
+# ========= Main pipeline =========
 
 def main() -> None:
-    ensure_api_key()
-    ensure_posts_dir()
-
-    log("Fetching latest AI articles…")
+    print("🧠 Fetching latest AI articles...")
     raw_items = fetch_latest(limit=MAX_POSTS)
 
-    if not raw_items:
-        fail("No items returned by the API.")
+    existing_titles, existing_links = load_existing_titles_and_links()
 
     created = 0
-    today = dt.date.today()
-
-    for art in raw_items:
-        md = build_markdown(art)
-        if not md:
-            continue
-
-        path = unique_filepath(today, art.get("title", "untitled"))
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(md)
-
-        created += 1
-        log(f"✅ Created: {os.path.basename(path)}")
-
+    for r in raw_items:
         if created >= MAX_POSTS:
             break
 
+        title = (r.get("title") or "").strip()
+        link = (r.get("link") or "").strip()
+        if not title or not link:
+            continue
+        if title in existing_titles or link in existing_links:
+            continue
+
+        # Build content (also re-parses pubDate)
+        pub = parse_pubdate(r.get("pubDate")) or now_utc()
+        md = build_post_md(r)
+        if not md:
+            continue
+
+        save_post_md(title, pub, md)
+        created += 1
+        print(f"✅ Created post: {title}")
+
     if created == 0:
-        fail("No high-quality articles to publish today (all filtered).")
+        print("ℹ️ No qualifying new posts found.")
     else:
-        log(f"🎉 Done. {created} post(s) created in '{POSTS_DIR}'.")
+        print(f"🎉 Done. Created {created} post(s).")
 
 
 if __name__ == "__main__":
