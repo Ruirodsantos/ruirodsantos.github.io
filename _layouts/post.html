@@ -1,73 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>{{ page.title }}</title>
-  <link rel="stylesheet" href="/assets/style.css">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575"
-     crossorigin="anonymous"></script>
-</head>
-<body>
-  <header>
-    <h1><a href="{{ '/' | relative_url }}">🧠 {{ site.title }}</a></h1>
-    <nav>
-      <a href="{{ '/' | relative_url }}">Home</a> |
-      <a href="{{ '/about.html' | relative_url }}">About</a> |
-      <a href="{{ '/contact.html' | relative_url }}">Contact</a>
-    </nav>
-  </header>
+---
+layout: default
+---
 
-  <main>
-    <!-- Anúncio antes do conteúdo -->
-    <ins class="adsbygoogle"
-         style="display:block; text-align:center; margin-bottom: 20px;"
-         data-ad-client="ca-pub-7715134134171575"
-         data-ad-slot="1234567890"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-         (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
+<article class="post-page">
+  <h1>{{ page.title }}</h1>
 
-    <article>
-      <h2>{{ page.title }}</h2>
-      <p><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</p>
+  <p class="post-meta">
+    <strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}
+  </p>
 
-      {% if page.image %}
-        <img src="{{ page.image }}" alt="Image for {{ page.title }}" class="post-thumbnail">
-      {% endif %}
+  {% if page.image %}
+    <img src="{{ page.image }}" alt="{{ page.title }}" class="post-image">
+  {% endif %}
 
-      {{ content }}
+  <!-- Ad block before content (same client/slot you used) -->
+  <ins class="adsbygoogle"
+       style="display:block; text-align:center; margin: 20px 0;"
+       data-ad-client="ca-pub-7715134134171575"
+       data-ad-slot="1234567890"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+  <script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+  </script>
 
-      <!-- Partilha -->
-      <div style="margin-top: 20px;">
-        <strong>Share this post:</strong><br>
-        <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}" target="_blank">Share on X</a> |
-        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}" target="_blank">Share on LinkedIn</a>
-      </div>
-    </article>
+  <div class="post-content">
+    {%- comment -%}
+      Remove “ONLY AVAILABLE IN PAID PLANS” if present to avoid ugly single-line posts.
+    {%- endcomment -%}
+    {{ content | replace: 'ONLY AVAILABLE IN PAID PLANS', '' }}
+  </div>
 
-    <!-- Posts relacionados -->
-    {% assign related = site.posts | where: "tag", page.tag | where_exp: "post", "post.url != page.url" | slice: 0, 3 %}
-    {% if related.size > 0 %}
-      <section style="margin-top: 40px;">
-        <h3>Related Posts</h3>
-        <ul class="post-list">
-          {% for post in related %}
-            <li class="post-item">
-              <a href="{{ post.url | relative_url }}">{{ post.title }}</a><br>
-              <span class="post-meta">{{ post.date | date: "%B %d, %Y" }}</span>
-            </li>
-          {% endfor %}
-        </ul>
-      </section>
-    {% endif %}
+  {%- if page.source and page.link -%}
+    <p class="post-source">
+      Source: <a href="{{ page.link }}" target="_blank" rel="noopener">{{ page.source }}</a>
+    </p>
+  {%- endif -%}
 
-    <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
-  </main>
+  <!-- Share buttons -->
+  <p style="margin-top: 20px;">
+    <strong>Share this post:</strong><br>
+    <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}" target="_blank" rel="noopener">Share on X</a> |
+    <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}" target="_blank" rel="noopener">Share on LinkedIn</a>
+  </p>
 
-  <footer>
-    <p>&copy; {{ "now" | date: "%Y" }} {{ site.title }} | Powered by Adventis</p>
-  </footer>
-</body>
-</html>
+  <!-- Related posts (3 random different posts) -->
+  <h3>Related Posts</h3>
+  <ul class="post-list">
+    {% assign related = site.posts | where_exp:"p","p.url != page.url" | sample:3 %}
+    {% for post in related %}
+      <li class="post-item">
+        <a href="{{ post.url | relative_url }}">{{ post.title }}</a><br>
+        <span class="post-meta">{{ post.date | date: "%B %d, %Y" }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
+</article>
