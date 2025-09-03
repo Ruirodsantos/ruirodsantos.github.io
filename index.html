@@ -18,7 +18,6 @@ title: AI Discovery Blog
       </p>
     </div>
     <div>
-      <!-- Coloca uma imagem em /assets/ai-hero.jpg ou altera o caminho -->
       <img src="/assets/ai-hero.jpg" alt="AI Discovery" style="width:100%; border-radius:12px; display:block;">
     </div>
   </div>
@@ -39,9 +38,7 @@ title: AI Discovery Blog
           <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
         </h2>
 
-        <div class="post-meta">
-          {{ post.date | date: "%B %d, %Y" }}
-        </div>
+        <div class="post-meta">{{ post.date | date: "%B %d, %Y" }}</div>
 
         {% if post.excerpt %}
           <p class="post-excerpt">{{ post.excerpt }}</p>
