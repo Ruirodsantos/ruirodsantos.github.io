@@ -1,241 +1,183 @@
 import os
 import re
 import textwrap
-from datetime import datetime, timedelta, timezone
-
+import datetime as dt
+from pathlib import Path
 import requests
-from dateutil import parser as dateparser
 from slugify import slugify
 
-# === CONFIG ===
+# === Config ===
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY")  # set in repo Secrets
-MAX_POSTS = 5
-POSTS_DIR = "_posts"
+API_KEY = os.getenv("NEWS_API_KEY") or os.getenv("NEWSDATA_API_KEY")  # aceita qualquer um dos dois
+if not API_KEY:
+    raise ValueError("❌ API_KEY não encontrada. Define 'NEWS_API_KEY' (ou 'NEWSDATA_API_KEY') em Secrets/Variables.")
 
-QUERY = "artificial intelligence OR AI OR machine learning OR generative ai OR llm"
-LANG = "en"
-CATEGORY = "technology"
+# Palavras-chave (mais amplas para variedade)
+KEYWORDS = [
+    "artificial intelligence", "AI", "machine learning", "generative ai",
+    "openai", "anthropic", "google ai", "meta ai", "microsoft ai", "stability ai",
+    "robotics", "lmm", "agents", "ai policy", "ai safety",
+]
 
+POSTS_DIR = Path("_posts")
+POSTS_DIR.mkdir(exist_ok=True)
 
-def have_key():
-    if not API_KEY:
-        raise ValueError("❌ NEWS_API_KEY is not set (repository secret).")
+# Parâmetros de qualidade
+MIN_DESC_CHARS = 140         # mínimo de chars na descrição/conteúdo
+MAX_POSTS_PER_RUN = 5        # quantos posts gerar por execução
+BLOCK_DUP_TITLES = True      # evita gerar posts com o mesmo título no mesmo dia
 
+def today_iso():
+    # usar UTC para consistência
+    return dt.datetime.utcnow().date().isoformat()
 
-def utcnow():
-    return datetime.now(timezone.utc)
-
-
-def sanitize_title(title: str) -> str:
-    return title.strip().replace('"', '\\"')
-
-
-def best_date(article: dict) -> datetime.date:
-    for key in ("pubDate", "pub_date", "date", "published_at"):
-        val = article.get(key)
-        if val:
-            try:
-                d = dateparser.parse(val)
-                if not d.tzinfo:
-                    d = d.replace(tzinfo=timezone.utc)
-                return d.date()
-            except Exception:
-                pass
-    return utcnow().date()
-
-
-def short_excerpt(text: str, limit: int = 220) -> str:
-    if not text:
-        return ""
-    text = re.sub(r"\s+", " ", text).strip()
-    return (text[: limit - 1] + "…") if len(text) > limit else text
-
-
-def _call(params):
+def fetch_latest_variants():
     """
-    Perform the API call and ALWAYS return (status_code, json_dict)
-    If JSON parsing fails, return {} as the dict.
+    Tenta algumas variantes de query para melhorar a taxa de acerto.
+    Gera no máx. MAX_POSTS_PER_RUN items.
     """
-    try:
-        r = requests.get(API_URL, params=params, timeout=30)
+    base_queries = [
+        " OR ".join(KEYWORDS),
+        "artificial intelligence OR generative ai OR machine learning",
+        "openai OR anthropic OR google ai OR meta ai OR microsoft ai",
+    ]
+    items = []
+    seen_ids = set()
+
+    params_common = {
+        "apikey": API_KEY,
+        "language": "en",
+        "page": 1,
+    }
+
+    last_err = None
+    for q in base_queries:
+        params = dict(params_common)
+        params["q"] = q
         try:
-            data = r.json()
-        except Exception:
-            data = {}
-        return r.status_code, data
-    except Exception as e:
-        # network error
-        return 0, {"status": "error", "results": str(e)}
-
-
-def extract_items(data):
-    """
-    Return a list of article dicts if present, else [].
-    Newsdata sometimes sends 'results' as list even with 422.
-    """
-    if not isinstance(data, dict):
-        return []
-    results = data.get("results")
-    if isinstance(results, list):
-        return results
-    return []
-
-
-def fetch_latest():
-    """
-    Progressive fallbacks. We now accept any HTTP status as long as we
-    get a non-empty 'results' list of items that look like articles.
-    """
-    now = utcnow()
-    since = now - timedelta(hours=24)
-
-    date_from = since.strftime("%Y-%m-%d")
-    date_to = now.strftime("%Y-%m-%d")
-
-    variants = [
-        # 1) Most specific
-        {
-            "apikey": API_KEY,
-            "q": QUERY,
-            "language": LANG,
-            "category": CATEGORY,
-            "from_date": date_from,
-            "to_date": date_to,
-            "page": 1,
-        },
-        # 2) No category
-        {
-            "apikey": API_KEY,
-            "q": QUERY,
-            "language": LANG,
-            "from_date": date_from,
-            "to_date": date_to,
-            "page": 1,
-        },
-        # 3) No dates
-        {
-            "apikey": API_KEY,
-            "q": QUERY,
-            "language": LANG,
-            "category": CATEGORY,
-            "page": 1,
-        },
-        # 4) Minimal
-        {
-            "apikey": API_KEY,
-            "q": "artificial intelligence OR AI",
-            "language": LANG,
-            "page": 1,
-        },
-    ]
-
-    last_note = None
-    for ix, params in enumerate(variants, start=1):
-        code, data = _call(params)
-        items = extract_items(data)
-        if items:
-            # Filter valid-looking articles
-            valid = []
-            seen = set()
-            for a in items:
-                title = (a.get("title") or "").strip()
-                desc = (a.get("description") or "").strip()
-                link = a.get("link")
-                if not title or not desc or not link:
+            res = requests.get(API_URL, params=params, timeout=30)
+            res.raise_for_status()
+            data = res.json() or {}
+            results = data.get("results") or []
+            for art in results:
+                aid = art.get("article_id") or art.get("link")
+                if not aid or aid in seen_ids:
                     continue
-                norm = re.sub(r"\s+", " ", title.lower())
-                if norm in seen:
-                    continue
-                seen.add(norm)
-                valid.append(a)
+                seen_ids.add(aid)
+                items.append(art)
+                if len(items) >= MAX_POSTS_PER_RUN:
+                    return items
+        except Exception as e:
+            last_err = e
+            continue
 
-            # Sort by pub date desc
-            def _ts(article):
-                try:
-                    return dateparser.parse(
-                        article.get("pubDate") or article.get("pub_date") or ""
-                    )
-                except Exception:
-                    return datetime(1970, 1, 1, tzinfo=timezone.utc)
+    if not items and last_err:
+        # nada apanhado em nenhuma variante
+        raise RuntimeError(f"All query variants failed. Last error: {last_err}")
+    return items
 
-            valid.sort(key=_ts, reverse=True)
-            if valid:
-                print(f"✅ Using variant {ix} (status {code}) with {len(valid)} items")
-                return valid[:MAX_POSTS]
-            else:
-                last_note = f"Variant {ix} had results but none valid."
-        else:
-            last_note = (
-                f"Variant {ix} returned status {code} with keys "
-                f"{list(data.keys()) if isinstance(data, dict) else 'N/A'}"
-            )
+def pick_image(article: dict) -> str | None:
+    # newsdata.io possíveis chaves
+    for key in ("image_url", "image", "thumbnail", "urlToImage"):
+        url = article.get(key)
+        if isinstance(url, str) and url.startswith("http"):
+            return url
+    return None
 
-    print(f"⚠️ All query variants produced no usable items. Last note: {last_note}")
-    return []
+def looks_low_quality(title: str, desc: str | None, content: str | None) -> bool:
+    if not title or len(title) < 8:
+        return True
+    # usa content se existir, senão desc
+    body = (content or "").strip() or (desc or "").strip()
+    # remove espaços múltiplos
+    body = re.sub(r"\s+", " ", body)
+    # muito curto?
+    if len(body) < MIN_DESC_CHARS:
+        return True
+    # igual ao título (quase)
+    if body.lower().startswith(title.lower()):
+        if len(body) <= len(title) + 10:
+            return True
+    return False
 
+def normalize_excerpt(text: str, max_chars=300) -> str:
+    text = re.sub(r"\s+", " ", (text or "")).strip()
+    return text[:max_chars].rstrip() + ("…" if len(text) > max_chars else "")
 
-def build_markdown(article: dict) -> str:
-    title = sanitize_title(article["title"])
-    date = best_date(article)
-    link = article.get("link")
-    src_name = article.get("source_id") or "Source"
-    image = article.get("image_url") or ""
-    excerpt = short_excerpt(article.get("content") or article.get("description") or "")
+def filename_for(date_str: str, title: str) -> Path:
+    base = slugify(title)[:60]
+    return POSTS_DIR / f"{date_str}-{base}.md"
 
-    fm = [
+def already_exists(date_str: str, title: str) -> bool:
+    # ver se existe ficheiro com a mesma data e título similar
+    slug = slugify(title)[:60]
+    pattern = f"{date_str}-{slug}.md"
+    return (POSTS_DIR / pattern).exists()
+
+def build_post_md(date_str: str, title: str, excerpt: str, source_name: str, url: str, image_url: str | None, body: str) -> str:
+    fm_lines = [
         "---",
-        "layout: post",
-        f'title: "{title}"',
-        f"date: {date}",
+        f'title: "{title.replace("\\\"", "\\\\\\"")}"',
+        f"date: {date_str}",
+        'layout: post',
+        "categories: [ai, news]",
     ]
-    if image:
-        fm.append(f'image: "{image}"')
-    fm.append("categories: [ai, news]")
-    fm.append("---")
+    if image_url:
+        fm_lines.append(f"image: {image_url}")
+    fm_lines.append(f'excerpt: "{excerpt.replace("\\\"", "\\\\\\"")}"')
+    fm_lines.append("---")
 
-    body = textwrap.dedent(
-        f"""
-        {excerpt}
+    md = "\n".join(fm_lines) + "\n\n"
+    md += textwrap.dedent(f"""\
+        {body}
 
-        Read more at: [{src_name}]({link})
-        """
-    ).strip()
-
-    return "\n".join(fm) + "\n\n" + body + "\n"
-
-
-def write_post(article: dict) -> str:
-    date = best_date(article)
-    slug = slugify(article["title"])[:60]
-    name = f"{date}-{slug}.md"
-    path = os.path.join(POSTS_DIR, name)
-    os.makedirs(POSTS_DIR, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(build_markdown(article))
-    return path
-
+        ---
+        **Source:** [{source_name}]({url})
+    """)
+    return md
 
 def main():
-    have_key()
-    items = fetch_latest()
-    if not items:
-        print("ℹ️ No posts created today (API returned no usable results).")
-        # exit 0 so GitHub Actions doesn't fail the job
-        return
-    written = []
-    for art in items:
-        try:
-            written.append(write_post(art))
-        except Exception as e:
-            print("❌ Skipped one:", e)
-    if written:
-        print("✅ Created posts:")
-        for p in written:
-            print(" -", p)
-    else:
-        print("ℹ️ Nothing written (all candidates filtered out).")
+    date_str = today_iso()
+    items = fetch_latest_variants()
 
+    created = 0
+    for art in items:
+        title = (art.get("title") or "").strip()
+        desc = (art.get("description") or art.get("summary") or "").strip()
+        content = (art.get("content") or "").strip()
+        url = art.get("link") or art.get("url") or "#"
+        source_name = (art.get("source_id") or art.get("source") or "Source").strip()
+
+        if looks_low_quality(title, desc, content):
+            # salta fracos
+            continue
+
+        if BLOCK_DUP_TITLES and already_exists(date_str, title):
+            continue
+
+        image_url = pick_image(art)
+        body = (content or desc).strip()
+        excerpt = normalize_excerpt(body, max_chars=240)
+
+        md = build_post_md(
+            date_str=date_str,
+            title=title,
+            excerpt=excerpt,
+            source_name=source_name,
+            url=url,
+            image_url=image_url,
+            body=body
+        )
+
+        path = filename_for(date_str, title)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(md)
+        created += 1
+
+        if created >= MAX_POSTS_PER_RUN:
+            break
+
+    print(f"✅ Posts criados: {created}")
 
 if __name__ == "__main__":
     main()
