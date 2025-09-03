@@ -2,237 +2,333 @@
 # -*- coding: utf-8 -*-
 
 """
-Update posts from Newsdata.io, with quality filters.
-
-ENV:
-  NEWS_API_KEY  -> your Newsdata API key (already set in Actions)
-
-Behavior:
-- Fetches page 1 only (avoids 422 pagination errors on free tier)
-- Keeps at most MAX_POSTS good items
-- Skips low-value or off-topic items
-- Falls back to description when content is missing
+scripts/update_posts.py
+Gera posts Jekyll a partir da Newsdata API com filtros de qualidade.
+- Pede até 5 artigos (podes alterar MAX_POSTS)
+- Evita artigos de baixa qualidade (pagos, vazios, desporto, etc.)
+- Usa paginação via nextPage
 """
 
 import os
 import re
+import sys
+import json
+import time
 import textwrap
-from datetime import datetime, timezone
+import datetime as dt
 from pathlib import Path
 
 import requests
 from slugify import slugify
 
+# ==========================
+# Configuração
+# ==========================
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY")
+API_KEY = os.getenv("NEWS_API_KEY") or os.getenv("NEWSDATA_API_KEY")
 
-# ----- Tuning -----
-MAX_POSTS = 5  # how many posts to create per run
-
-# Topics we want
-KEYWORDS = [
+# Palavras AI (busca)
+AI_QUERY_TERMS = [
     "artificial intelligence",
-    "ai",
+    "AI",
     "machine learning",
+    "generative ai",
     "openai",
     "anthropic",
-    "llm",
     "google ai",
     "meta ai",
-    "generative ai",
+    "llm",
 ]
 
-# Things to avoid (sports schedules, gossip, obvious off-topic)
-BLACKLIST = [
-    "bundesliga", "premier league", "rangers", "celtic", "championship",
-    "derbies", "broadcasts", "lineup", "fixture", "kickoff", "highlights",
-    "gossip", "soap opera", "celebrity", "transfer rumor",
+# Palavras a evitar (desporto / temas fora de AI que têm aparecido)
+BANNED_TERMS = [
+    # futebol / desporto
+    "premier league", "bundesliga", "rangers", "celtic", "guardiola",
+    "manchester city", "brighton", "espn", "disney+", "derbies",
+    # entretenimento / soap opera
+    "general hospital", "soap opera",
+    # artigos puramente regionais de tv
+    "broadcasts:", "sunday:", "fixtures",
 ]
 
-# Strings that signal the item is paywalled/empty
-PAYWALL_STRINGS = [
-    "ONLY AVAILABLE IN PAID PLANS",
-    "subscribe to read",
+# Frases que indicam conteúdo fechado / fraco
+PAID_WALL_MARKERS = [
+    "only available in paid plans",
+    "subscribe to read the full",
     "subscription required",
 ]
 
+# Pastas/limites
 POSTS_DIR = Path("_posts")
 POSTS_DIR.mkdir(parents=True, exist_ok=True)
 
+MAX_POSTS = int(os.getenv("MAX_POSTS", "5"))  # quantos posts criar
+MIN_DESC_CHARS = 160                           # desc mínima aceitável
+MIN_CONTENT_CHARS = 280                        # conteúdo mínimo aceitável
+
+# ==========================
+# Utilitários
+# ==========================
+
+def log(msg: str) -> None:
+    print(msg, flush=True)
+
+def today_ymd() -> str:
+    return dt.datetime.utcnow().date().isoformat()
+
+def sanitize_text(s: str) -> str:
+    """Limpa espaços, remove html simples, normaliza quotes."""
+    if not s:
+        return ""
+    s = re.sub(r"<[^>]+>", " ", s)    # remove tags html
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def too_sporty(text: str) -> bool:
+    text_l = text.lower()
+    return any(term in text_l for term in BANNED_TERMS)
+
+def looks_paywalled(text: str) -> bool:
+    text_l = text.lower()
+    return any(marker in text_l for marker in PAID_WALL_MARKERS)
+
+def good_quality(title: str, desc: str, content: str) -> bool:
+    """Heurística simples de qualidade."""
+    t = sanitize_text(title)
+    d = sanitize_text(desc)
+    c = sanitize_text(content)
+
+    # não pode estar vazio
+    if not t:
+        return False
+
+    # evitar títulos repetidos no excerpt
+    if d and d.lower() == t.lower():
+        return False
+
+    # rejeitar paywall markers
+    if looks_paywalled(d) or looks_paywalled(c):
+        return False
+
+    # rejeitar desporto / fora de tema óbvio
+    if too_sporty(" ".join([t, d, c])):
+        return False
+
+    # algum conteúdo mínimo
+    if (len(c) < MIN_CONTENT_CHARS) and (len(d) < MIN_DESC_CHARS):
+        return False
+
+    return True
+
+def clamp_excerpt(text: str, max_chars: int = 240) -> str:
+    text = sanitize_text(text)
+    if len(text) <= max_chars:
+        return text
+    # corta por palavra
+    return textwrap.shorten(text, width=max_chars, placeholder="…")
+
+def pick_image(item: dict) -> str:
+    """Tenta extrair uma imagem do item Newsdata."""
+    for key in ("image_url", "image", "image_link", "thumbnail"):
+        url = item.get(key)
+        if url and isinstance(url, str) and url.startswith("http"):
+            return url
+    return ""
+
+def api_key_or_die() -> str:
+    if not API_KEY:
+        raise RuntimeError("API_KEY não encontrada. Define NEWS_API_KEY (ou NEWSDATA_API_KEY) nas Actions.")
+    return API_KEY
+
+# ==========================
+# API
+# ==========================
+
+def build_query() -> str:
+    # liga termos com OR para cobrir várias variantes
+    return " OR ".join(AI_QUERY_TERMS)
 
 def call_api(params: dict) -> dict:
-    """Call Newsdata and raise nicely if the request fails."""
+    """Chama API e valida erros usuais."""
     resp = requests.get(API_URL, params=params, timeout=30)
     try:
+        data = resp.json()
+    except Exception:
         resp.raise_for_status()
-    except requests.HTTPError:
-        # show URL in logs if something goes wrong
-        print("URL:", resp.url)
+        # se chegou aqui, não é JSON
         raise
-    return resp.json()
 
+    # Newsdata por vezes devolve {"status":"error", "results":{"message": ...}}
+    # ou HTTP 422 para filtros não suportados.
+    if resp.status_code != 200 or data.get("status") != "success":
+        # Mostrar URL para facilitar debug
+        log(f"⚠️ API error ({resp.status_code}): {json.dumps(data) if isinstance(data, dict) else data}")
+        log(f"URL: {resp.url}")
+        resp.raise_for_status()
 
-def fetch_latest(limit: int = MAX_POSTS) -> list[dict]:
+    return data
+
+def fetch_latest(max_items: int = MAX_POSTS) -> list[dict]:
     """
-    Fetch recent AI/tech news (first page only).
-    We request the first page only to avoid the "UnsupportedFilter" 422
-    that happens with invalid pagination tokens on free plans.
+    Vai buscar artigos usando paginação por nextPage.
+    Só aceita artigos que passem os filtros de qualidade.
     """
-    if not API_KEY:
-        raise RuntimeError("NEWS_API_KEY is missing in the environment.")
+    api_key_or_die()
+    query = build_query()
 
-    query = " OR ".join(KEYWORDS)
     params = {
         "apikey": API_KEY,
         "q": query,
         "language": "en",
         "category": "technology",
-        "page": 1,  # first page only — safe for free plan
+        # A Newsdata usa paginação por nextPage (token). Não passar "page"!
+        # Podemos também pedir data recente filtrando 'from_date' se necessário.
+        # "from_date": today_ymd(),  # opcional – alguns planos não suportam este filtro
     }
 
-    print("🧠 Fetching latest AI articles...")
-    data = call_api(params)
+    accepted: list[dict] = []
+    next_page = None
+    tries = 0
 
-    if data.get("status") != "success":
-        # Defensive: sometimes API returns error payload with 200 OK
-        msg = data.get("results", {}).get("message") if isinstance(data.get("results"), dict) else data
-        raise RuntimeError(f"API returned non-success status: {msg}")
+    while len(accepted) < max_items and tries < 8:  # limite de segurança
+        if next_page:
+            params["page"] = next_page  # apesar da doc, a resposta devolve 'nextPage' e aceita como 'page'
+        else:
+            # garantir que não fica 'page' pendurado entre ciclos
+            params.pop("page", None)
 
-    results = data.get("results") or []
-    items: list[dict] = []
-    for it in results:
-        # Normalize fields we care about
-        item = {
-            "title": (it.get("title") or "").strip(),
-            "description": (it.get("description") or "").strip(),
-            "content": (it.get("content") or "").strip(),
-            "link": it.get("link") or it.get("source_url") or "",
-            "source": it.get("source_id") or it.get("source") or "source",
-            "image": it.get("image_url") or "",
-            "date": (it.get("pubDate") or it.get("pub_date") or ""),
-        }
-        items.append(item)
+        data = call_api(params)
 
-    # Filter, score, and take the best
-    good = [it for it in items if is_good_item(it)]
-    return good[:limit]
+        results = data.get("results") or []
+        if not isinstance(results, list) or not results:
+            break
 
+        for it in results:
+            if len(accepted) >= max_items:
+                break
 
-def is_blacklisted(text: str) -> bool:
-    lo = text.lower()
-    return any(b in lo for b in BLACKLIST)
+            title = sanitize_text(it.get("title", ""))
+            desc = sanitize_text(it.get("description", ""))
+            content = sanitize_text(it.get("content", "")) or desc
 
+            if not good_quality(title, desc, content):
+                continue
 
-def is_paywalled(text: str) -> bool:
-    up = text.upper()
-    return any(pw in up for pw in PAYWALL_STRINGS)
+            accepted.append(it)
 
+        # paginação
+        next_page = data.get("nextPage")
+        tries += 1
+        if not next_page:
+            break
 
-def body_from_item(item: dict) -> str:
-    """Choose the best available body text."""
-    body = item.get("content") or item.get("description") or ""
-    # Remove boilerplate whitespace
-    body = re.sub(r"\s+", " ", body).strip()
-    return body
+        # respeitar a API
+        time.sleep(0.4)
 
+    return accepted[:max_items]
 
-def is_good_item(item: dict) -> bool:
-    """Quality filter for items."""
-    title = item.get("title", "").strip()
-    if not title or len(title) < 10:
-        return False
+# ==========================
+# Escrita do post
+# ==========================
 
-    if is_blacklisted(title):
-        return False
+def build_markdown(item: dict) -> str:
+    """Gera o conteúdo Markdown com front-matter."""
+    title = sanitize_text(item.get("title", ""))
+    desc = sanitize_text(item.get("description", ""))
+    content = sanitize_text(item.get("content", "")) or desc
 
-    body = body_from_item(item)
-    if not body or len(body) < 180:  # ~2–3 sentences minimum
-        return False
-    if is_paywalled(body):
-        return False
+    # fallback: pequeno 'mini-resumo' se o content for curto
+    if len(content) < MIN_CONTENT_CHARS:
+        # criar um parágrafo a partir da desc + título
+        base = desc if len(desc) >= 80 else (title + ". " + desc)
+        content = clamp_excerpt(base, 900)
 
-    # Also check the description for blacklist/paywall—sometimes content is blank but desc is bad
-    desc = (item.get("description") or "").strip()
-    if desc:
-        if is_blacklisted(desc) or is_paywalled(desc):
-            return False
+    image_url = pick_image(item)
+    source_id = item.get("source_id") or item.get("source") or ""
+    link = item.get("link") or item.get("url") or ""
+    the_date = dt.datetime.utcnow().date().isoformat()
 
-    return True
+    # Sanitizar strings para YAML
+    safe_title = title.replace('"', '\\"')
+    safe_excerpt = clamp_excerpt(desc or content, 240).replace('"', '\\"')
 
-
-def safe_excerpt(text: str, words: int = 40) -> str:
-    """Plain excerpt limited by words."""
-    tokens = re.split(r"\s+", text.strip())
-    cut = " ".join(tokens[:words]).strip()
-    return cut + ("…" if len(tokens) > words else "")
-
-
-def parse_date(d: str) -> str:
-    """
-    Return YYYY-MM-DD. Newsdata dates are often RFC3339.
-    """
-    if not d:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    try:
-        # Handles e.g. "2025-09-02 10:31:44", "2025-09-02T10:31:44Z", etc.
-        d = d.replace("Z", "+00:00").replace(" ", "T") if "T" not in d else d
-        dt = datetime.fromisoformat(d)
-    except Exception:
-        dt = datetime.now(timezone.utc)
-    return dt.strftime("%Y-%m-%d")
-
-
-def build_markdown(item: dict) -> tuple[str, str]:
-    """Create filename + markdown contents with front matter."""
-    title = item["title"]
-    slug = slugify(title)[:80] or "post"
-    date_str = parse_date(item.get("date"))
-    fname = f"{date_str}-{slug}.md"
-
-    body = body_from_item(item)
-    excerpt = safe_excerpt(body, 55)
-
-    # Minimal formatting for readability
-    wrapped = "\n\n".join(textwrap.fill(p, width=90) for p in re.split(r"\n{2,}|\.\s{1,}", body) if p.strip())
-
-    # Front matter + body
-    fm = [
+    fm_lines = [
         "---",
-        f'title: "{title.replace("\\\"", "\\\\\\"")}"',
-        f"date: {date_str}",
-        f"excerpt: \"{excerpt.replace('\"', '\\\"')}\"",
-        "layout: post",
+        'layout: post',
+        f'title: "{safe_title}"',
+        f'date: {the_date}',
+        'tags: [ai, news]',
     ]
-    if item.get("image"):
-        fm.append(f'image: "{item["image"]}"')
-    fm.append("---")
+    if image_url:
+        fm_lines.append(f'image: "{image_url}"')
+    if source_id:
+        fm_lines.append(f'source: "{source_id}"')
+    if link:
+        fm_lines.append(f'link: "{link}"')
+    fm_lines.append(f'excerpt: "{safe_excerpt}"')
+    fm_lines.append("---")
 
-    content = "\n".join(fm) + "\n\n"
-    content += f"Source: [{item['source']}]({item['link']})\n\n"
-    content += wrapped or excerpt  # guaranteed not empty by filters
+    body_lines = []
 
-    return fname, content
+    if image_url:
+        # Mostra a imagem dentro do corpo também (o layout já a pode usar via front-matter)
+        body_lines.append(f'![{safe_title}]({image_url})\n')
 
+    body_lines.append(content)
+    if link:
+        body_lines.append(f'\n\n_Read more at: [{source_id or "source"}]({link})_')
 
-def write_post(filename: str, content: str) -> None:
-    path = POSTS_DIR / filename
-    if path.exists():
-        print(f"— Skipping (already exists): {filename}")
+    return "\n".join(fm_lines) + "\n\n" + "\n".join(body_lines).strip() + "\n"
+
+def save_item(item: dict) -> str:
+    """Guarda um item como ficheiro em _posts/."""
+    title = sanitize_text(item.get("title", "untitled"))
+    slug = slugify(title)[:70] or "post"
+    date_prefix = today_ymd()
+    filename = POSTS_DIR / f"{date_prefix}-{slug}.md"
+
+    # Evitar sobrescrever se já existe (por ex. se o slug repetiu)
+    idx = 2
+    while filename.exists():
+        filename = POSTS_DIR / f"{date_prefix}-{slug}-{idx}.md"
+        idx += 1
+
+    md = build_markdown(item)
+    filename.write_text(md, encoding="utf-8")
+    return str(filename)
+
+# ==========================
+# Main
+# ==========================
+
+def main() -> None:
+    log("🧠 Running update_posts.py...")
+    api_key_or_die()
+
+    log("📰 Fetching latest AI articles...")
+    items = fetch_latest(MAX_POSTS)
+
+    if not items:
+        log("ℹ️ No acceptable articles found. Nothing to do.")
         return
-    path.write_text(content, encoding="utf-8")
-    print(f"✅ Created: {filename}")
 
+    created = []
+    for it in items:
+        try:
+            path = save_item(it)
+            created.append(path)
+            log(f"✅ Created: {path}")
+        except Exception as e:
+            log(f"❌ Failed to save post: {e}")
 
-def main():
-    raw_items = fetch_latest(limit=MAX_POSTS)
-    if not raw_items:
-        print("⚠️ No suitable articles today (filters may have removed all).")
-        return
-
-    for it in raw_items:
-        filename, md = build_markdown(it)
-        write_post(filename, md)
-
+    if created:
+        log(f"🎉 Done. {len(created)} post(s) created.")
+    else:
+        log("ℹ️ No files created after filtering.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        log(f"❌ Fatal error: {e}")
+        sys.exit(1)
