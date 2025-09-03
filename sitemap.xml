@@ -1,0 +1,31 @@
+---
+layout: null
+permalink: /sitemap.xml
+---
+
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{{ site.url }}{{ site.baseurl }}</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  {% for page in site.pages %}
+    {% unless page.sitemap == false or page.url contains 'sitemap.xml' %}
+      <url>
+        <loc>{{ site.url }}{{ page.url | relative_url }}</loc>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+      </url>
+    {% endunless %}
+  {% endfor %}
+
+  {% for post in site.posts %}
+    <url>
+      <loc>{{ site.url }}{{ post.url | relative_url }}</loc>
+      <changefreq>daily</changefreq>
+      <priority>0.8</priority>
+    </url>
+  {% endfor %}
+</urlset>
