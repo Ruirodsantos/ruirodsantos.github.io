@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>{{ page.title | default: site.title }}</title>
+  <meta charset="UTF-8">
+  <title>{{ page.title }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}" />
-  <!-- AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575"
+     crossorigin="anonymous"></script>
 </head>
 <body>
   <header>
     <h1><a href="{{ '/' | relative_url }}">🧠 {{ site.title }}</a></h1>
+    <p>Discover the latest tools, breakthroughs, and trends in Artificial Intelligence</p>
     <nav>
       <a href="{{ '/' | relative_url }}">Home</a> |
       <a href="{{ '/about.html' | relative_url }}">About</a> |
@@ -24,17 +27,13 @@
 
   <footer>
     <div class="footer-inner">
-      <div class="footer-copy">
-        © {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved
-      </div>
-
+      <p>© {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved</p>
       <div class="social-icons">
-        <!-- EarnApp referral button -->
         <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 2a10 10 0 100 20 10 10 0 000-20Zm1 5v5h4v2h-6V7h2Z"/>
+            <circle cx="12" cy="12" r="10"/>
           </svg>
-          Earn with me
+          EarnApp
         </a>
       </div>
     </div>
