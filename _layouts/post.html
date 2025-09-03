@@ -1,60 +1,83 @@
----
-layout: default
----
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ page.title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/assets/style.css">
+  <!-- AdSense (head) -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header>
+    <h1><a href="{{ '/' | relative_url }}">🧠 {{ site.title }}</a></h1>
+    <nav>
+      <a href="{{ '/' | relative_url }}">Home</a> |
+      <a href="{{ '/about.html' | relative_url }}">About</a> |
+      <a href="{{ '/contact.html' | relative_url }}">Contact</a>
+    </nav>
+  </header>
 
-<article class="post-page">
-  <h1>{{ page.title }}</h1>
+  <main class="post-page">
+    <!-- AdSense block before content -->
+    <ins class="adsbygoogle"
+         style="display:block; text-align:center; margin-bottom: 20px;"
+         data-ad-client="ca-pub-7715134134171575"
+         data-ad-slot="1234567890"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
-  <p class="post-meta">
-    <strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}
-  </p>
+    <article class="post-content">
+      <h2>{{ page.title }}</h2>
+      <p class="post-meta">
+        <strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}
+      </p>
 
-  {% if page.image %}
-    <img src="{{ page.image }}" alt="{{ page.title }}" class="post-image">
-  {% endif %}
+      {% if page.image %}
+        <img src="{{ page.image }}" alt="{{ page.title }}" class="post-image" />
+      {% endif %}
 
-  <!-- Ad block before content (same client/slot you used) -->
-  <ins class="adsbygoogle"
-       style="display:block; text-align:center; margin: 20px 0;"
-       data-ad-client="ca-pub-7715134134171575"
-       data-ad-slot="1234567890"
-       data-ad-format="auto"
-       data-full-width-responsive="true"></ins>
-  <script>
-    (adsbygoogle = window.adsbygoogle || []).push({});
-  </script>
+      {{ content }}
 
-  <div class="post-content">
-    {%- comment -%}
-      Remove “ONLY AVAILABLE IN PAID PLANS” if present to avoid ugly single-line posts.
-    {%- endcomment -%}
-    {{ content | replace: 'ONLY AVAILABLE IN PAID PLANS', '' }}
-  </div>
+      <!-- Share -->
+      <div style="margin-top: 24px;">
+        <strong>Share:</strong>
+        <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}" target="_blank" rel="noopener">X</a> ·
+        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}" target="_blank" rel="noopener">LinkedIn</a>
+      </div>
+    </article>
 
-  {%- if page.source and page.link -%}
-    <p class="post-source">
-      Source: <a href="{{ page.link }}" target="_blank" rel="noopener">{{ page.source }}</a>
-    </p>
-  {%- endif -%}
+    <!-- Related posts -->
+    {% assign related_posts = site.posts | where_exp: "p", "p.url != page.url" | limit:3 %}
+    {% if related_posts.size > 0 %}
+      <section style="margin-top: 40px;">
+        <h3>Related posts</h3>
+        <ul class="post-list">
+          {% for p in related_posts %}
+            <li class="post-item">
+              <a href="{{ p.url | relative_url }}">{{ p.title }}</a><br>
+              <span class="post-meta">{{ p.date | date: "%B %d, %Y" }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
 
-  <!-- Share buttons -->
-  <p style="margin-top: 20px;">
-    <strong>Share this post:</strong><br>
-    <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}" target="_blank" rel="noopener">Share on X</a> |
-    <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}" target="_blank" rel="noopener">Share on LinkedIn</a>
-  </p>
+    <p style="margin-top: 28px;"><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
+  </main>
 
-  <!-- Related posts (3 random different posts) -->
-  <h3>Related Posts</h3>
-  <ul class="post-list">
-    {% assign related = site.posts | where_exp:"p","p.url != page.url" | sample:3 %}
-    {% for post in related %}
-      <li class="post-item">
-        <a href="{{ post.url | relative_url }}">{{ post.title }}</a><br>
-        <span class="post-meta">{{ post.date | date: "%B %d, %Y" }}</span>
-      </li>
-    {% endfor %}
-  </ul>
-
-  <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
-</article>
+  <footer>
+    <div class="footer-inner">
+      <p>© {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved</p>
+      <div class="social-icons">
+        <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
+          <!-- Simple coin icon -->
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
+          EarnApp
+        </a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
