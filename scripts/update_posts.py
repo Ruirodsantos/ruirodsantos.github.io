@@ -5,16 +5,27 @@ import json
 import hashlib
 from pathlib import Path
 import datetime as dt
+from typing import List, Dict, Tuple
 
 import requests
 from slugify import slugify
 
-API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY")  # set as Repository Variable
-MAX_POSTS = 5
 
+# --------- Config ---------
 POSTS_DIR = Path("_posts")
 POSTS_DIR.mkdir(exist_ok=True)
+
+MAX_POSTS = 5
+MIN_BODY_CHARS = 140  # skip one-liners/low-value
+TODAY_UTC = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+
+# Newsdata.io
+NEWSDATA_URL = "https://newsdata.io/api/1/news"
+NEWSDATA_KEY = os.getenv("NEWS_API_KEY")  # <-- repository variable for newsdata.io
+
+# NewsAPI.org (fallback)
+NEWSAPI_URL = "https://newsapi.org/v2/everything"
+NEWSAPI_KEY = os.getenv("NEWSAPI_ORG_KEY")  # <-- repository variable for newsapi.org
 
 KEYWORDS = [
     "artificial intelligence",
@@ -27,21 +38,22 @@ KEYWORDS = [
     "meta ai",
 ]
 
-# ---------- small helpers ----------
+
+# --------- Helpers ---------
 def clean_text(s: str) -> str:
     if not s:
         return ""
     return re.sub(r"\s+", " ", s).strip()
 
-def good_enough(text: str, min_chars: int = 140) -> bool:
-    return text and len(text.strip()) >= min_chars
 
-def today_utc_str() -> str:
-    return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+def good_enough(text: str, min_chars: int = MIN_BODY_CHARS) -> bool:
+    return bool(text) and len(text.strip()) >= min_chars
+
 
 def build_filename(date_str: str, title: str) -> Path:
     slug = slugify(title)[:70] or "post"
     return POSTS_DIR / f"{date_str}-{slug}.md"
+
 
 def already_exists_by_url(url: str) -> bool:
     if not url:
@@ -55,15 +67,9 @@ def already_exists_by_url(url: str) -> bool:
             pass
     return False
 
-def make_post_md(article: dict, date_str: str) -> str:
-    title = clean_text(article.get("title") or "")
-    source = clean_text(article.get("source_id") or article.get("source") or "source")
-    link = article.get("link") or article.get("url") or ""
-    description = clean_text(article.get("description") or "")
-    content = clean_text(article.get("content") or description)
 
+def make_post_md(article: Dict, date_str: str, source: str, link: str, content: str, title: str) -> str:
     dedupe_tag = hashlib.sha1((link or title).encode("utf-8")).hexdigest()[:12]
-
     fm = {
         "layout": "post",
         "title": title.replace('"', '\\"'),
@@ -78,42 +84,55 @@ def make_post_md(article: dict, date_str: str) -> str:
         for k, v in fm.items()
     ) + "\n---\n"
 
-    body = []
+    body_lines = []
     if link:
-        body.append(f"**Source:** [{source}]({link})\n")
-    body.append(content or description)
+        body_lines.append(f"**Source:** [{source}]({link})\n")
+    body_lines.append(content)
 
-    return front_matter + "\n".join(body).strip() + "\n"
+    return front_matter + "\n".join(body_lines).strip() + "\n"
 
-# ---------- API fetch with graceful fallback ----------
-def fetch_latest() -> list[dict]:
+
+def extract_ymd(value: str) -> str:
     """
-    Try progressively simpler parameter sets to avoid 422 errors on free tier.
+    Attempt to normalize to YYYY-MM-DD from various date strings.
     """
-    if not API_KEY:
-        raise ValueError("API key missing. Define repository variable NEWS_API_KEY.")
+    if not value:
+        return ""
+    m = re.match(r"(\d{4}-\d{2}-\d{2})", value)
+    if m:
+        return m.group(1)
+    # 2025-09-02T12:34:56Z
+    m = re.match(r"(\d{4}-\d{2}-\d{2})T", value)
+    if m:
+        return m.group(1)
+    return ""
+
+
+# --------- Providers ---------
+def fetch_newsdata() -> List[Dict]:
+    """
+    Try Newsdata with progressively simpler parameters to avoid 422.
+    Returns a list of 'results' items or [].
+    """
+    if not NEWSDATA_KEY:
+        return []
 
     q_full = " OR ".join(KEYWORDS)
     candidates = [
-        # Most complete (often OK, but sometimes 422 on free tier)
-        {"q": q_full, "language": "en", "category": "technology", "page": 1},
-        # Drop category
-        {"q": q_full, "language": "en", "page": 1},
-        # Shorter query
-        {"q": "artificial intelligence OR generative ai OR llm", "language": "en", "page": 1},
-        # Minimal query (almost always accepted)
-        {"q": "ai", "language": "en", "page": 1},
+        {"q": q_full, "language": "en", "category": "technology"},
+        {"q": q_full, "language": "en"},
+        {"q": "artificial intelligence OR generative ai OR llm", "language": "en"},
+        {"q": "ai", "language": "en"},
+        {"q": "ai"},  # last-resort
     ]
 
     headers = {"User-Agent": "ai-discovery-bot/1.0"}
-
     last_err = None
+
     for params in candidates:
-        params = {"apikey": API_KEY, **params}
+        params = {"apikey": NEWSDATA_KEY, **params}
         try:
-            resp = requests.get(API_URL, params=params, headers=headers, timeout=30)
-            # Uncomment for debugging:
-            # print("DEBUG URL:", resp.url)
+            resp = requests.get(NEWSDATA_URL, params=params, headers=headers, timeout=30)
             resp.raise_for_status()
             data = resp.json()
             results = data.get("results") or []
@@ -121,55 +140,116 @@ def fetch_latest() -> list[dict]:
                 return results
         except requests.HTTPError as e:
             last_err = e
-            # If 422, try the next simpler candidate
+            # 422 → try next candidate
             if resp is not None and resp.status_code == 422:
                 continue
-            # For other HTTP errors, break early
             break
         except Exception as e:
             last_err = e
             break
 
     if last_err:
-        raise last_err
+        print(f"⚠️ Newsdata error: {last_err}")
     return []
 
-# ---------- main ----------
+
+def fetch_newsapi() -> List[Dict]:
+    """
+    Fallback to NewsAPI.org if available.
+    Returns list of articles (NewsAPI schema) or [].
+    """
+    if not NEWSAPI_KEY:
+        return []
+
+    q_full = " OR ".join(KEYWORDS)
+    params = {
+        "q": q_full,
+        "language": "en",
+        "sortBy": "publishedAt",
+        "pageSize": 50,
+        "apiKey": NEWSAPI_KEY,
+    }
+    headers = {"User-Agent": "ai-discovery-bot/1.0"}
+    try:
+        resp = requests.get(NEWSAPI_URL, params=params, headers=headers, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("articles") or []
+    except Exception as e:
+        print(f"⚠️ NewsAPI error: {e}")
+        return []
+
+
+# --------- Normalizers ---------
+def normalize_newsdata(items: List[Dict]) -> List[Tuple[str, str, str, str]]:
+    """
+    Map Newsdata results to (date, title, content, link)
+    """
+    normalized = []
+    for a in items:
+        title = clean_text(a.get("title") or "")
+        link = a.get("link") or a.get("url") or ""
+        source = clean_text(a.get("source_id") or a.get("source") or "source")
+        descr = clean_text(a.get("description") or "")
+        content = clean_text(a.get("content") or descr)
+        date_str = extract_ymd(a.get("pubDate") or "")
+        normalized.append((date_str, title, content, link, source))
+    return normalized
+
+
+def normalize_newsapi(items: List[Dict]) -> List[Tuple[str, str, str, str]]:
+    """
+    Map NewsAPI articles to (date, title, content, link)
+    """
+    normalized = []
+    for a in items:
+        title = clean_text(a.get("title") or "")
+        link = a.get("url") or ""
+        source_name = clean_text((a.get("source") or {}).get("name") or "source")
+        descr = clean_text(a.get("description") or "")
+        content = clean_text(a.get("content") or descr)
+        date_str = extract_ymd(a.get("publishedAt") or "")
+        normalized.append((date_str, title, content, link, source_name))
+    return normalized
+
+
+# --------- Main flow ---------
 def main():
-    items = fetch_latest()
-    if not items:
-        print("ℹ️ API returned no results.")
+    # 1) Try Newsdata
+    items = fetch_newsdata()
+    normalized = normalize_newsdata(items) if items else []
+
+    # 2) Fallback to NewsAPI.org if nothing usable from Newsdata
+    if not normalized:
+        print("ℹ️ Falling back to NewsAPI.org …")
+        articles = fetch_newsapi()
+        normalized = normalize_newsapi(articles)
+
+    if not normalized:
+        print("ℹ️ No articles from any provider.")
         return
 
-    today = today_utc_str()
     created = 0
-    skipped_quality = 0
     skipped_date = 0
+    skipped_short = 0
     skipped_dupe = 0
 
-    for a in items:
+    for date_str, title, content, link, source in normalized:
         if created >= MAX_POSTS:
             break
-
-        title = (a.get("title") or "").strip()
-        if not title:
+        if not title or not content:
             continue
 
-        # Normalize date to YYYY-MM-DD and keep only today (UTC)
-        pub = (a.get("pubDate") or a.get("publishedAt") or "").strip()
-        m = re.match(r"(\d{4}-\d{2}-\d{2})", pub)
-        date_str = m.group(1) if m else today
-        if date_str != today:
+        # Only today's posts (UTC)
+        if date_str != TODAY_UTC:
             skipped_date += 1
             continue
 
-        content = clean_text(a.get("content") or a.get("description") or "")
         if not good_enough(content):
-            skipped_quality += 1
+            skipped_short += 1
             continue
 
-        url = a.get("link") or a.get("url") or ""
-        if already_exists_by_url(url):
+        if already_exists_by_url(link):
             skipped_dupe += 1
             continue
 
@@ -178,7 +258,14 @@ def main():
             skipped_dupe += 1
             continue
 
-        md = make_post_md(a, date_str)
+        md = make_post_md(
+            article={},
+            date_str=date_str,
+            source=source,
+            link=link,
+            content=content,
+            title=title,
+        )
         path.write_text(md, encoding="utf-8")
         created += 1
         print(f"✅ Created: {path}")
@@ -189,9 +276,10 @@ def main():
         print(
             f"ℹ️ No posts created. "
             f"Skipped (date != today): {skipped_date}, "
-            f"Skipped (too short): {skipped_quality}, "
+            f"Skipped (too short): {skipped_short}, "
             f"Skipped (duplicates): {skipped_dupe}."
         )
+
 
 if __name__ == "__main__":
     main()
