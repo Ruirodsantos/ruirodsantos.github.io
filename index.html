@@ -18,7 +18,10 @@ title: AI Discovery Blog
       </p>
     </div>
     <div>
-      <img src="/assets/ai-hero.jpg" alt="AI Discovery" style="width:100%; border-radius:12px; display:block;">
+      <img src="{{ '/assets/ai-hero.jpg' | relative_url }}" 
+           alt="AI Discovery" 
+           style="width:100%; border-radius:12px; display:block;" 
+           loading="lazy">
     </div>
   </div>
 </section>
@@ -30,7 +33,7 @@ title: AI Discovery Blog
       <li class="post-item">
         {% if post.image %}
           <a href="{{ post.url | relative_url }}">
-            <img class="post-thumbnail" src="{{ post.image }}" alt="{{ post.title }}">
+            <img class="post-thumbnail" src="{{ post.image | relative_url }}" alt="{{ post.title }}">
           </a>
         {% endif %}
 
