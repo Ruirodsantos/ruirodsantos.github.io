@@ -1,135 +1,168 @@
+# scripts/update_posts.py
 import os
-from datetime import datetime, timedelta, timezone
+import re
+import json
+import hashlib
+import datetime as dt
 from pathlib import Path
 
 import requests
 from slugify import slugify
 
-# === CONFIG ===
-POSTS_DIR = Path("_posts")
-POSTS_DIR.mkdir(parents=True, exist_ok=True)
-
-DAILY_TARGET = 5  # how many posts per run
-KEYWORDS = ["artificial intelligence", "machine learning", "AI", "AGI"]
-
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY")
+API_KEY = os.getenv("NEWS_API_KEY")  # set in repo Variables, not Secrets
+MAX_POSTS = 5
 
-if not API_KEY:
-    raise ValueError("API_KEY not found. Set NEWS_API_KEY in repo Variables.")
+POSTS_DIR = Path("_posts")
+POSTS_DIR.mkdir(exist_ok=True)
 
-NOW = datetime.now(timezone.utc)
-CUTOFF = NOW - timedelta(days=1)
+KEYWORDS = [
+    "artificial intelligence",
+    "machine learning",
+    "generative ai",
+    "llm",
+    "openai",
+    "anthropic",
+    "google ai",
+    "meta ai",
+]
 
-def parse_dt(any_date: str):
-    if not any_date:
-        return None
-    fmts = [
-        "%Y-%m-%dT%H:%M:%S%z",
-        "%Y-%m-%dT%H:%M:%SZ",
-        "%Y-%m-%d %H:%M:%S%z",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d",
-    ]
-    for f in fmts:
-        try:
-            dt = datetime.strptime(any_date, f)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt.astimezone(timezone.utc)
-        except Exception:
-            continue
-    return None
+def clean_text(s: str) -> str:
+    if not s:
+        return ""
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
-def safe_get(d: dict, *keys, default=None):
-    for k in keys:
-        v = d.get(k)
-        if v:
-            return v
-    return default
+def good_enough(text: str, min_chars: int = 140) -> bool:
+    return text and len(text.strip()) >= min_chars
 
-def fetch_batch():
-    query = " OR ".join(KEYWORDS)
+def today_utc_date_str() -> str:
+    return dt.datetime.utcnow().strftime("%Y-%m-%d")
+
+def fetch_today_articles() -> list[dict]:
+    """Fetch only today's items (UTC) from Newsdata.io."""
+    if not API_KEY:
+        raise ValueError("API_KEY not found. Define repo variable NEWS_API_KEY.")
+    q = " OR ".join(KEYWORDS)
+
     params = {
         "apikey": API_KEY,
-        "q": query,
+        "q": q,
         "language": "en",
         "category": "technology",
+        # force today-only window (UTC)
+        "from_date": today_utc_date_str(),
+        "to_date": today_utc_date_str(),
+        "page": 1,
     }
-    r = requests.get(API_URL, params=params, timeout=30)
-    r.raise_for_status()
-    data = r.json()
-    return data.get("results", []) or []
+    resp = requests.get(API_URL, params=params, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
 
-def build_filename(dt: datetime, title: str) -> Path:
-    slug = slugify(title)[:80]
-    return POSTS_DIR / f"{dt.strftime('%Y-%m-%d')}-{slug}.md"
+    results = data.get("results") or []
+    return results
 
-def sanitize(text: str) -> str:
-    return text.replace('"', "'").replace("\n", " ").strip()
+def build_filename(date_str: str, title: str) -> Path:
+    slug = slugify(title)[:70] or "post"
+    return POSTS_DIR / f"{date_str}-{slug}.md"
 
-def make_front_matter(article: dict, dt: datetime, title: str, link: str, source: str, image: str, excerpt: str) -> str:
-    yml = [
-        "---",
-        "layout: post",
-        f'title: "{sanitize(title)}"',
-        f"date: {dt.strftime('%Y-%m-%d')}",
-        f'image: "{sanitize(image)}"' if image else "image:",
-        f'excerpt: "{sanitize(excerpt)}"' if excerpt else "excerpt:",
-        "categories: [ai, news]",
-        "---",
-        "",
-        f"Source: [{source}]({link})" if link else "",
-        "",
-    ]
-    return "\n".join(yml).strip() + "\n"
+def already_exists_by_url(url: str) -> bool:
+    # Lightweight dedupe tag based on URL in file content
+    tag = hashlib.sha1(url.encode("utf-8")).hexdigest()[:12]
+    for p in POSTS_DIR.glob("*.md"):
+        try:
+            if tag in p.read_text(encoding="utf-8", errors="ignore"):
+                return True
+        except Exception:
+            pass
+    return False
 
-def create_post(article: dict):
-    title = safe_get(article, "title", "name")
-    if not title:
-        return None
+def make_post_md(article: dict, date_str: str) -> str:
+    title = clean_text(article.get("title") or "")
+    source = clean_text(article.get("source_id") or article.get("source") or "source")
+    link = article.get("link") or article.get("url") or ""
+    description = clean_text(article.get("description") or "")
+    content = clean_text(article.get("content") or description)
 
-    link = safe_get(article, "link", "url")
-    source = safe_get(article, "source_id", "source", "creator", default="Source")
+    # compact dedupe tag
+    dedupe_tag = hashlib.sha1((link or title).encode("utf-8")).hexdigest()[:12]
 
-    pub_txt = safe_get(article, "pubDate", "published_at", "published", "date")
-    dt = parse_dt(pub_txt) or NOW
-    if dt < CUTOFF:
-        return None
+    fm = {
+        "layout": "post",
+        "title": title.replace('"', '\\"'),
+        "date": date_str,
+        "categories": ["ai", "news"],
+        "source": source,
+        "original_url": link,
+        "_dedupe": dedupe_tag,
+    }
 
-    image = safe_get(article, "image_url", "image", "urlToImage", "image_link", default="")
-    content = safe_get(article, "content", "full_description", default="") or ""
-    description = safe_get(article, "description", "summary", default="") or ""
-    excerpt = (description or content)[:240].strip()
+    front_matter = "---\n" + "\n".join(
+        f'{k}: "{v}"' if isinstance(v, str) else f"{k}: {json.dumps(v)}"
+        for k, v in fm.items()
+    ) + "\n---\n"
 
-    if len((description + content).strip()) < 120:
-        return None
+    body = []
+    if link:
+        body.append(f"**Source:** [{source}]({link})\n")
+    body.append(content or description)
 
-    fn = build_filename(dt, title)
-    if fn.exists():
-        return None
-
-    md = make_front_matter(article, dt, title, link or "", str(source), image or "", excerpt)
-    with open(fn, "w", encoding="utf-8") as f:
-        f.write(md)
-        f.write("\n" + (content or description) + "\n")
-
-    return fn
+    return front_matter + "\n".join(body).strip() + "\n"
 
 def main():
     created = 0
-    results = fetch_batch()
+    try:
+        articles = fetch_today_articles()
+    except Exception as e:
+        print(f"❌ API error: {e}")
+        raise
 
-    for art in results:
-        if created >= DAILY_TARGET:
+    if not articles:
+        print("ℹ️ No results for today (UTC).")
+        return
+
+    # keep only items which truly have today's pubDate (UTC) and enough content
+    today = today_utc_date_str()
+
+    for a in articles:
+        if created >= MAX_POSTS:
             break
-        fn = create_post(art)
-        if fn:
-            created += 1
-            print(f"✅ Created: {fn}")
+
+        title = (a.get("title") or "").strip()
+        if not title:
+            continue
+
+        pub = (a.get("pubDate") or a.get("publishedAt") or "").strip()
+        # Extract YYYY-MM-DD; fallback to today if missing
+        m = re.match(r"(\d{4}-\d{2}-\d{2})", pub)
+        date_str = m.group(1) if m else today
+
+        if date_str != today:
+            # strictly show only today's posts
+            continue
+
+        # Text quality
+        content = clean_text(a.get("content") or a.get("description") or "")
+        if not good_enough(content):
+            continue
+
+        url = a.get("link") or a.get("url") or ""
+        if url and already_exists_by_url(url):
+            continue
+
+        # Build and write file
+        path = build_filename(date_str, title)
+        if path.exists():
+            # avoid duplicates by filename collision
+            continue
+
+        md = make_post_md(a, date_str)
+        path.write_text(md, encoding="utf-8")
+        created += 1
+        print(f"✅ Created: {path}")
 
     if created == 0:
-        print("ℹ️ No new posts created.")
+        print("ℹ️ No new posts created for today.")
     else:
         print(f"🎉 Done. Created {created} post(s).")
 
