@@ -3,17 +3,51 @@ layout: default
 title: AI Discovery Blog
 ---
 
-<section class="home">
-  <h2>Latest Posts</h2>
+<!-- HERO -->
+<section style="max-width: 980px; margin: 0 auto; padding: 2rem 1rem;">
+  <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.2rem; align-items: center;">
+    <div>
+      <h1 style="margin-top:0;">Stay ahead in AI — daily.</h1>
+      <p>
+        Curated highlights from the world of Artificial Intelligence:
+        product launches, research breakthroughs, real-world use cases.
+        Each post includes a quick summary so you can skim or dive deeper.
+      </p>
+      <p style="margin: 0.75rem 0 0;">
+        <em>Tip:</em> Click any headline to read the summary and source link.
+      </p>
+    </div>
+    <div>
+      <!-- Coloca uma imagem em /assets/ai-hero.jpg ou altera o caminho -->
+      <img src="/assets/ai-hero.jpg" alt="AI Discovery" style="width:100%; border-radius:12px; display:block;">
+    </div>
+  </div>
+</section>
 
+<!-- POSTS LIST -->
+<section style="max-width: 980px; margin: 0 auto; padding: 0 1rem 2rem;">
   <ul class="post-list">
     {% for post in site.posts %}
       <li class="post-item">
-        <a href="{{ post.url | relative_url }}"><h3>{{ post.title }}</h3></a>
-        <div class="post-meta">🗓 {{ post.date | date: "%B %d, %Y" }}</div>
-        <p class="post-excerpt">
-          {{ post.excerpt | strip_html | truncatewords: 40 }}
-        </p>
+        {% if post.image %}
+          <a href="{{ post.url | relative_url }}">
+            <img class="post-thumbnail" src="{{ post.image }}" alt="{{ post.title }}">
+          </a>
+        {% endif %}
+
+        <h2 style="margin: 0.2rem 0 0.2rem;">
+          <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+        </h2>
+
+        <div class="post-meta">
+          {{ post.date | date: "%B %d, %Y" }}
+        </div>
+
+        {% if post.excerpt %}
+          <p class="post-excerpt">{{ post.excerpt }}</p>
+        {% endif %}
+
+        <a href="{{ post.url | relative_url }}">Read more →</a>
       </li>
     {% endfor %}
   </ul>
