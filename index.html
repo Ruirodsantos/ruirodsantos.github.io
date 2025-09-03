@@ -3,43 +3,9 @@ layout: default
 title: AI Discovery Blog
 ---
 
-<style>
-  .hero {
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-  }
-  .hero-grid {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 1.2rem;
-    align-items: center;
-  }
-  @media (max-width: 820px) {
-    .hero-grid { grid-template-columns: 1fr; }
-  }
-  .hero-img {
-    width: 100%;
-    border-radius: 12px;
-    display: block;
-    /* Keep height even if the image fails to load */
-    aspect-ratio: 16 / 10;
-    object-fit: cover;
-    background: linear-gradient(135deg, #0e1325 0%, #1b2a4a 100%);
-  }
-
-  .post-wrap { max-width: 980px; margin: 0 auto; padding: 0 1rem 2rem; }
-  .post-list { list-style: none; padding: 0; margin: 0; }
-  .post-item { margin: 0 0 2rem 0; border-bottom: 1px solid #eee; padding-bottom: 1.25rem; }
-  .post-item:last-child { border-bottom: 0; }
-  .post-thumbnail { max-width: 100%; height: auto; border-radius: 8px; margin: 0 0 .5rem 0; }
-  .post-meta { color: #666; font-size: .95rem; margin: .4rem 0 .6rem; }
-  .post-excerpt { color: #333; }
-</style>
-
 <!-- HERO -->
-<section class="hero">
-  <div class="hero-grid">
+<section style="max-width: 980px; margin: 0 auto; padding: 2rem 1rem;">
+  <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.2rem; align-items: center;">
     <div>
       <h1 style="margin-top:0;">Stay ahead in AI — daily.</h1>
       <p>
@@ -47,35 +13,30 @@ title: AI Discovery Blog
         product launches, research breakthroughs, real-world use cases.
         Each post includes a quick summary so you can skim or dive deeper.
       </p>
-      <p style="margin: .75rem 0 0;">
+      <p style="margin: 0.75rem 0 0;">
         <em>Tip:</em> Click any headline to read the summary and source link.
       </p>
     </div>
     <div>
-      <!-- Fallback-safe hero image -->
-      <img
-        class="hero-img"
-        alt="AI Discovery"
-        src="{{ '/assets/ai-hero.jpg' | relative_url }}"
-        loading="eager"
-        onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 1200 750&quot;><defs><linearGradient id=&quot;g&quot; x1=&quot;0&quot; y1=&quot;0&quot; x2=&quot;1&quot; y2=&quot;1&quot;><stop offset=&quot;0&quot; stop-color=&quot;%230e1325&quot;/><stop offset=&quot;1&quot; stop-color=&quot;%231b2a4a&quot;/></linearGradient></defs><rect width=&quot;1200&quot; height=&quot;750&quot; fill=&quot;url(%23g)&quot;/><text x=&quot;50%&quot; y=&quot;50%&quot; fill=&quot;%23ffffff&quot; font-size=&quot;64&quot; font-family=&quot;Arial, Helvetica, sans-serif&quot; text-anchor=&quot;middle&quot; dominant-baseline=&quot;middle&quot; opacity=&quot;.9&quot;>AI Discovery</text></svg>';"
-      >
+      <img src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=1200&q=80" 
+           alt="Artificial Intelligence concept" 
+           style="width:100%; border-radius:12px; display:block;">
     </div>
   </div>
 </section>
 
 <!-- POSTS LIST -->
-<section class="post-wrap">
+<section style="max-width: 980px; margin: 0 auto; padding: 0 1rem 2rem;">
   <ul class="post-list">
     {% for post in site.posts %}
       <li class="post-item">
         {% if post.image %}
           <a href="{{ post.url | relative_url }}">
-            <img class="post-thumbnail" src="{{ post.image | relative_url }}" alt="{{ post.title }}" loading="lazy">
+            <img class="post-thumbnail" src="{{ post.image }}" alt="{{ post.title }}">
           </a>
         {% endif %}
 
-        <h2 style="margin: .2rem 0 .2rem;">
+        <h2 style="margin: 0.2rem 0 0.2rem;">
           <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
         </h2>
 
