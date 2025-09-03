@@ -1,284 +1,238 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""
+Update posts from Newsdata.io, with quality filters.
+
+ENV:
+  NEWS_API_KEY  -> your Newsdata API key (already set in Actions)
+
+Behavior:
+- Fetches page 1 only (avoids 422 pagination errors on free tier)
+- Keeps at most MAX_POSTS good items
+- Skips low-value or off-topic items
+- Falls back to description when content is missing
+"""
+
 import os
 import re
-import sys
-import time
-import json
-import hashlib
-import datetime as dt
+import textwrap
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
 from slugify import slugify
 
-# =========================
-# Config
-# =========================
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWSDATA_API_KEY") or os.getenv("NEWS_API_KEY")
+API_KEY = os.getenv("NEWS_API_KEY")
 
-POSTS_DIR = Path("_posts")
-MAX_POSTS = 5
-MAX_PAGES = 3          # tentativas de paginação (só se a API aceitar)
-TIMEOUT = 20
+# ----- Tuning -----
+MAX_POSTS = 5  # how many posts to create per run
 
+# Topics we want
 KEYWORDS = [
     "artificial intelligence",
     "ai",
     "machine learning",
-    "llm",
     "openai",
     "anthropic",
+    "llm",
     "google ai",
     "meta ai",
     "generative ai",
 ]
 
-EXCLUDE_PATTERNS = [
-    r"\b(bundesliga|premier league|la liga|serie a|rangers|celtic|brighton|manchester city|espn|disney\+)\b",
-    r"\b(scottish championship|derbies?)\b",
-    r"ONLY AVAILABLE IN PAID PLANS",
+# Things to avoid (sports schedules, gossip, obvious off-topic)
+BLACKLIST = [
+    "bundesliga", "premier league", "rangers", "celtic", "championship",
+    "derbies", "broadcasts", "lineup", "fixture", "kickoff", "highlights",
+    "gossip", "soap opera", "celebrity", "transfer rumor",
 ]
 
-MIN_EXCERPT_LEN = 80
+# Strings that signal the item is paywalled/empty
+PAYWALL_STRINGS = [
+    "ONLY AVAILABLE IN PAID PLANS",
+    "subscribe to read",
+    "subscription required",
+]
 
-
-# =========================
-# Helpers
-# =========================
-def log(msg: str) -> None:
-    print(msg, flush=True)
-
-
-def ensure_api_key() -> None:
-    if not API_KEY:
-        raise ValueError(
-            "❌ API_KEY não encontrada. Define `NEWSDATA_API_KEY` (ou `NEWS_API_KEY`) "
-            "em Settings → Secrets and variables → Variables."
-        )
+POSTS_DIR = Path("_posts")
+POSTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def call_api(params: dict) -> dict:
-    """Chama a API e devolve JSON; levanta exceção para 4xx/5xx."""
-    r = requests.get(API_URL, params=params, timeout=TIMEOUT)
-    if r.status_code == 422:
-        # Mostra o motivo detalhado e a URL para debug
-        try:
-            payload = r.json()
-        except Exception:
-            payload = r.text
-        log(f"⚠️ API error (422): {payload}")
-        log(f"URL: {r.url}")
-        r.raise_for_status()
-    r.raise_for_status()
-    return r.json()
-
-
-def text_contains_any(text: str, keywords: list[str]) -> bool:
-    t = text.lower()
-    return any(k.lower() in t for k in keywords)
-
-
-def is_excluded(text: str) -> bool:
-    if not text:
-        return False
-    for pat in EXCLUDE_PATTERNS:
-        if re.search(pat, text, flags=re.IGNORECASE):
-            return True
-    return False
-
-
-def choose_text(item: dict) -> tuple[str, str]:
-    title = (item.get("title") or "").strip()
-    description = (item.get("description") or "").strip()
-    content = (item.get("content") or "").strip()
-
-    body = content or description or ""
-    if body.strip().lower() == title.strip().lower():
-        body = ""
-    return title, body
-
-
-def parse_date(item: dict) -> dt.datetime:
-    raw = item.get("pubDate") or item.get("pubdate") or ""
+    """Call Newsdata and raise nicely if the request fails."""
+    resp = requests.get(API_URL, params=params, timeout=30)
     try:
-        iso = raw.replace("Z", "").split(" ")[0]
-        return dt.datetime.strptime(iso, "%Y-%m-%d")
-    except Exception:
-        return dt.datetime.utcnow()
-
-
-def dedupe_key(item: dict) -> str:
-    basis = (item.get("link") or "") + "|" + (item.get("title") or "")
-    return hashlib.sha1(basis.encode("utf-8")).hexdigest()[:16]
-
-
-def post_filename(pub_date: dt.datetime, title: str) -> Path:
-    slug = slugify(title)[:60]
-    date_str = pub_date.date().isoformat()
-    return POSTS_DIR / f"{date_str}-{slug}.md"
-
-
-def build_post_md(item: dict) -> tuple[Path, str]:
-    pub = parse_date(item)
-    title, body = choose_text(item)
-    image = item.get("image_url") or item.get("image")
-
-    if not body and item.get("description"):
-        body = item["description"].strip()
-
-    safe_title = title.replace('"', "'")
-
-    fm = [
-        "---",
-        "layout: post",
-        f'title: "{safe_title}"',
-        f"date: {pub.date().isoformat()}",
-        "---",
-        "",
-    ]
-
-    lines = []
-    if image:
-        lines.append(f"![{title}]({image})")
-        lines.append("")
-
-    if body:
-        lines.append(body.strip())
-        lines.append("")
-
-    source_name = (item.get("source_id") or item.get("source") or "source").strip()
-    link = (item.get("link") or "").strip()
-    if link:
-        lines.append(f"Source: [{source_name}]({link})")
-
-    content = "\n".join(fm + lines).strip() + "\n"
-    path = post_filename(pub, title)
-    return path, content
-
-
-def quality_ok(item: dict) -> bool:
-    title, body = choose_text(item)
-    text = " ".join([title or "", body or "", item.get("description") or ""]).strip()
-
-    if not title or len(title) < 10:
-        return False
-
-    if is_excluded(text):
-        return False
-
-    if not text_contains_any(title + " " + (item.get("description") or ""), KEYWORDS):
-        return False
-
-    if (item.get("content") or "").strip().lower() == "only available in paid plans":
-        return False
-
-    excerpt = (item.get("description") or "").strip()
-    if len(excerpt) < MIN_EXCERPT_LEN:
-        if len((item.get("content") or "").strip()) < MIN_EXCERPT_LEN:
-            return False
-
-    if excerpt and excerpt.strip().lower() == (title or "").strip().lower():
-        return False
-
-    return True
+        resp.raise_for_status()
+    except requests.HTTPError:
+        # show URL in logs if something goes wrong
+        print("URL:", resp.url)
+        raise
+    return resp.json()
 
 
 def fetch_latest(limit: int = MAX_POSTS) -> list[dict]:
     """
-    Busca até `limit` items da Newsdata tentando variantes seguras de parâmetros.
-    Evitamos `category` e, se houver 422, caímos para a query mais simples.
+    Fetch recent AI/tech news (first page only).
+    We request the first page only to avoid the "UnsupportedFilter" 422
+    that happens with invalid pagination tokens on free plans.
     """
-    ensure_api_key()
+    if not API_KEY:
+        raise RuntimeError("NEWS_API_KEY is missing in the environment.")
 
     query = " OR ".join(KEYWORDS)
-    results: list[dict] = []
-    seen: set[str] = set()
+    params = {
+        "apikey": API_KEY,
+        "q": query,
+        "language": "en",
+        "category": "technology",
+        "page": 1,  # first page only — safe for free plan
+    }
 
-    log("🧠 Fetching latest AI articles...")
+    print("🧠 Fetching latest AI articles...")
+    data = call_api(params)
 
-    # Variantes de parâmetros para contornar 422/UnsupportedFilter:
-    # 1) mais simples (sem paginação)
-    # 2) com page=1 (alguns planos aceitam)
-    PARAM_VARIANTS = [
-        lambda page: {"apikey": API_KEY, "q": query, "language": "en"},
-        lambda page: {"apikey": API_KEY, "q": query, "language": "en", "page": page},
-    ]
+    if data.get("status") != "success":
+        # Defensive: sometimes API returns error payload with 200 OK
+        msg = data.get("results", {}).get("message") if isinstance(data.get("results"), dict) else data
+        raise RuntimeError(f"API returned non-success status: {msg}")
 
-    for page in range(1, MAX_PAGES + 1):
-        success_this_page = False
+    results = data.get("results") or []
+    items: list[dict] = []
+    for it in results:
+        # Normalize fields we care about
+        item = {
+            "title": (it.get("title") or "").strip(),
+            "description": (it.get("description") or "").strip(),
+            "content": (it.get("content") or "").strip(),
+            "link": it.get("link") or it.get("source_url") or "",
+            "source": it.get("source_id") or it.get("source") or "source",
+            "image": it.get("image_url") or "",
+            "date": (it.get("pubDate") or it.get("pub_date") or ""),
+        }
+        items.append(item)
 
-        for mk in PARAM_VARIANTS:
-            params = mk(page)
-            try:
-                data = call_api(params)
-            except requests.HTTPError as e:
-                # 422 aqui -> tenta próxima variante, e só falha de vez se todas rebentarem
-                if e.response is not None and e.response.status_code == 422:
-                    continue
-                raise
-
-            items = data.get("results") or data.get("data") or []
-            for it in items:
-                h = dedupe_key(it)
-                if h in seen:
-                    continue
-                seen.add(h)
-
-                if quality_ok(it):
-                    results.append(it)
-                    if len(results) >= limit:
-                        return results
-
-            success_this_page = True
-            break  # não precisamos de tentar outras variantes para este page
-
-        # se nenhuma variante funcionou neste page, pára o ciclo
-        if not success_this_page:
-            break
-
-        time.sleep(0.5)
-
-    return results
+    # Filter, score, and take the best
+    good = [it for it in items if is_good_item(it)]
+    return good[:limit]
 
 
-def write_post(path: Path, content: str) -> bool:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists():
+def is_blacklisted(text: str) -> bool:
+    lo = text.lower()
+    return any(b in lo for b in BLACKLIST)
+
+
+def is_paywalled(text: str) -> bool:
+    up = text.upper()
+    return any(pw in up for pw in PAYWALL_STRINGS)
+
+
+def body_from_item(item: dict) -> str:
+    """Choose the best available body text."""
+    body = item.get("content") or item.get("description") or ""
+    # Remove boilerplate whitespace
+    body = re.sub(r"\s+", " ", body).strip()
+    return body
+
+
+def is_good_item(item: dict) -> bool:
+    """Quality filter for items."""
+    title = item.get("title", "").strip()
+    if not title or len(title) < 10:
         return False
-    path.write_text(content, encoding="utf-8")
+
+    if is_blacklisted(title):
+        return False
+
+    body = body_from_item(item)
+    if not body or len(body) < 180:  # ~2–3 sentences minimum
+        return False
+    if is_paywalled(body):
+        return False
+
+    # Also check the description for blacklist/paywall—sometimes content is blank but desc is bad
+    desc = (item.get("description") or "").strip()
+    if desc:
+        if is_blacklisted(desc) or is_paywalled(desc):
+            return False
+
     return True
 
 
-def main() -> int:
+def safe_excerpt(text: str, words: int = 40) -> str:
+    """Plain excerpt limited by words."""
+    tokens = re.split(r"\s+", text.strip())
+    cut = " ".join(tokens[:words]).strip()
+    return cut + ("…" if len(tokens) > words else "")
+
+
+def parse_date(d: str) -> str:
+    """
+    Return YYYY-MM-DD. Newsdata dates are often RFC3339.
+    """
+    if not d:
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
     try:
-        items = fetch_latest(limit=MAX_POSTS)
-    except Exception as e:
-        log(f"❌ Falha na API: {e}")
-        return 1
+        # Handles e.g. "2025-09-02 10:31:44", "2025-09-02T10:31:44Z", etc.
+        d = d.replace("Z", "+00:00").replace(" ", "T") if "T" not in d else d
+        dt = datetime.fromisoformat(d)
+    except Exception:
+        dt = datetime.now(timezone.utc)
+    return dt.strftime("%Y-%m-%d")
 
-    if not items:
-        log("ℹ️ Sem itens novos após filtros de qualidade.")
-        return 0
 
-    created = 0
-    for it in items:
-        path, md = build_post_md(it)
-        if write_post(path, md):
-            created += 1
-            log(f"✅ Post criado: {path}")
-        else:
-            log(f"↩️ Já existia: {path.name}")
+def build_markdown(item: dict) -> tuple[str, str]:
+    """Create filename + markdown contents with front matter."""
+    title = item["title"]
+    slug = slugify(title)[:80] or "post"
+    date_str = parse_date(item.get("date"))
+    fname = f"{date_str}-{slug}.md"
 
-    if created == 0:
-        log("ℹ️ Nenhum ficheiro novo foi criado (todos já existiam).")
-    else:
-        log(f"🎉 {created} post(s) criados.")
+    body = body_from_item(item)
+    excerpt = safe_excerpt(body, 55)
 
-    return 0
+    # Minimal formatting for readability
+    wrapped = "\n\n".join(textwrap.fill(p, width=90) for p in re.split(r"\n{2,}|\.\s{1,}", body) if p.strip())
+
+    # Front matter + body
+    fm = [
+        "---",
+        f'title: "{title.replace("\\\"", "\\\\\\"")}"',
+        f"date: {date_str}",
+        f"excerpt: \"{excerpt.replace('\"', '\\\"')}\"",
+        "layout: post",
+    ]
+    if item.get("image"):
+        fm.append(f'image: "{item["image"]}"')
+    fm.append("---")
+
+    content = "\n".join(fm) + "\n\n"
+    content += f"Source: [{item['source']}]({item['link']})\n\n"
+    content += wrapped or excerpt  # guaranteed not empty by filters
+
+    return fname, content
+
+
+def write_post(filename: str, content: str) -> None:
+    path = POSTS_DIR / filename
+    if path.exists():
+        print(f"— Skipping (already exists): {filename}")
+        return
+    path.write_text(content, encoding="utf-8")
+    print(f"✅ Created: {filename}")
+
+
+def main():
+    raw_items = fetch_latest(limit=MAX_POSTS)
+    if not raw_items:
+        print("⚠️ No suitable articles today (filters may have removed all).")
+        return
+
+    for it in raw_items:
+        filename, md = build_markdown(it)
+        write_post(filename, md)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
