@@ -2,13 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Gera até N posts por dia a partir da Newsdata.io, com:
- - filtros de qualidade,
- - expansão automática de conteúdo,
- - imagem (se disponível),
- - de-duplicação por slug.
+Gerador/atualizador de posts para o Jekyll a partir da Newsdata.io
 
-Requer variável de ambiente: NEWSDATA_API_KEY (ou NEWS_API_KEY)
+- Busca notícias de IA
+- Filtra ruído/baixa qualidade
+- Cria até 5 posts por execução com conteúdo mínimo útil
+- Preenche imagem e fonte quando disponíveis
+
+Requisitos:
+  pip install requests python-slugify
+
+Variáveis de ambiente aceites para a API:
+  NEWS_API_KEY            (preferida)
+  NEWSDATA_API_KEY        (alternativa/compatibilidade)
 """
 
 import os
@@ -16,318 +22,363 @@ import re
 import json
 import textwrap
 from datetime import datetime, timezone
-from pathlib import Path
+from typing import Dict, Any, List, Optional
 
 import requests
+from slugify import slugify
 
-try:
-    from slugify import slugify  # pip install python-slugify
-except Exception:
-    # fallback super simples
-    def slugify(s: str) -> str:
-        s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
-        s = re.sub(r"\s+", "-", s.strip())
-        return s.lower()
 
-# ------------------------------------------------------------
-# Configurações
-# ------------------------------------------------------------
+# =======================
+# Configuração do script
+# =======================
+
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWSDATA_API_KEY") or os.getenv("NEWS_API_KEY")
 
-POSTS_DIR = Path("_posts")
-POSTS_DIR.mkdir(exist_ok=True)
+# Usa NEWS_API_KEY por padrão; cai para NEWSDATA_API_KEY se necessário
+API_KEY = os.getenv("NEWS_API_KEY") or os.getenv("NEWSDATA_API_KEY")
 
-# Q curta para evitar "UnsupportedQueryLength"
-# (não use termos gigantes; 100 chars é o limite prático)
-QUERY = "ai OR artificial intelligence OR machine learning"
+# Consulta curta para evitar "UnsupportedQueryLength"
+# (manter curta é importante com a Newsdata)
+QUERY = '("artificial intelligence" OR AI OR "machine learning")'
 
 LANG = "en"
 CATEGORY = "technology"
 
-# Quantidade máxima de posts a criar num run
+# Número máximo de posts por execução
 MAX_POSTS = 5
 
-# Critérios de qualidade/limpeza
-MIN_BODY_CHARS = 500           # final expandido precisa ter ~500+ chars
-MIN_EXCERPT_CHARS = 60         # excerpt mínimo
-BANNED_PHRASES = {
-    "ONLY AVAILABLE IN PAID PLANS",
-    "Only available in paid plans",
-    "Only for subscribers",
+# Pasta Jekyll dos posts
+POSTS_DIR = "_posts"
+
+# Palavras a excluir (ruído típico que passou no feed)
+EXCLUDE_KEYWORDS = {
+    "bundesliga", "premier league", "rangers", "celtic", "guardiola",
+    "brighton", "manchester city", "derbies", "broadcasts",
+    "football", "soccer",
+    "only available in paid plans",  # corta cedo
 }
-# Palavras/chaves que normalmente sinalizam desporto/TV/agenda
-OFF_TOPIC_PATTERNS = [
-    r"\b(Bundesliga|Premier League|Rangers|Celtic|Manchester City|derbies)\b",
-    r"\bfixtures?\b",
-    r"\bhighlights?\b",
-]
 
-# ------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------
-def log(msg: str):
-    print(msg, flush=True)
+# Limiares de qualidade
+MIN_WORDS = 80  # mínimo de palavras úteis no corpo
+MAX_EXCERPT_LEN = 220  # tamanho do excerpt front matter
 
-def api_get(params: dict) -> dict:
-    """Chama a API com tratamento de erro e logging de URL."""
-    resp = requests.get(API_URL, params=params, timeout=25)
-    if resp.status_code >= 400:
-        log(f"❗ API error ({resp.status_code}): {resp.text}")
-        log(f"URL: {resp.url}")
-        resp.raise_for_status()
-    data = resp.json()
-    # A Newsdata devolve {"status":"error", "results": {"message": "..."}}
-    if isinstance(data, dict) and data.get("status") == "error":
-        log(f"⚠️ API error: {json.dumps(data)}")
-        log(f"URL: {resp.url}")
-        raise requests.HTTPError(data)
-    return data
+# Placeholder (se quiseres usar uma imagem fixa por defeito, define aqui um path do repo)
+PLACEHOLDER_IMAGE = None  # ex.: "/assets/og-default.jpg"
 
-def strip_html(s: str | None) -> str:
+
+# =======================
+# Utilitários
+# =======================
+
+def clean_text(s: Optional[str]) -> str:
     if not s:
         return ""
-    s = re.sub(r"<\s*br\s*/?\s*>", "\n", s, flags=re.I)
-    s = re.sub(r"<[^>]+>", "", s)
-    return s.strip()
+    s = s.replace("\u00a0", " ").replace("\u200b", "")
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
-def looks_off_topic(text: str) -> bool:
-    if not text:
-        return False
-    for pat in OFF_TOPIC_PATTERNS:
-        if re.search(pat, text, flags=re.I):
-            return True
+def looks_like_low_value(text: str) -> bool:
+    """Heurística para conteúdo fraco/indesejado."""
+    t = text.lower()
+
+    # corta se tiver mensagens de paywall/indisponível
+    if "only available in paid plans" in t or "only available" in t:
+        return True
+
+    # corta se conter palavras de ruído (desporto)
+    if any(k in t for k in EXCLUDE_KEYWORDS):
+        return True
+
     return False
 
-def too_short(text: str, min_chars: int) -> bool:
-    return len(text or "") < min_chars
+def bulletize_from_description(desc: str) -> List[str]:
+    """Gera 3–5 bullets simples a partir do description."""
+    desc = clean_text(desc)
+    if not desc:
+        return []
 
-def contains_banned(text: str) -> bool:
-    if not text:
-        return False
-    for b in BANNED_PHRASES:
-        if b.lower() in text.lower():
-            return True
-    return False
+    # separa por pontuação. mantemos simples
+    parts = re.split(r"[.;:!?]\s+", desc)
+    parts = [p.strip() for p in parts if len(p.strip()) > 0]
+    # remove duplicados curtinhos
+    uniq = []
+    for p in parts:
+        if len(p) < 12:
+            continue
+        if p not in uniq:
+            uniq.append(p)
 
-def uniquify_slug(date_str: str, base_slug: str) -> str:
-    """Evita colisão de ficheiros (_posts/yyyy-mm-dd-slug.md)."""
-    candidate = f"{date_str}-{base_slug}.md"
-    p = POSTS_DIR / candidate
-    if not p.exists():
-        return candidate
-    # acrescenta sufixo -2, -3, ...
-    i = 2
-    while True:
-        candidate = f"{date_str}-{base_slug}-{i}.md"
-        if not (POSTS_DIR / candidate).exists():
-            return candidate
-        i += 1
+    bullets = uniq[:5]
+    # se não chegar, cria frases genéricas
+    while len(bullets) < 3 and len(bullets) < len(uniq):
+        bullets.append(uniq[len(bullets)])
 
-def build_excerpt(text: str) -> str:
-    """Cria excerpt limpo com ~200 chars."""
-    text = strip_html(text)
-    text = re.sub(r"\s+", " ", text).strip()
-    if len(text) > 200:
-        text = text[:200].rsplit(" ", 1)[0] + "..."
-    return text
+    # corta cada bullet para ~140 chars para não ficar gigante
+    clipped = []
+    for b in bullets:
+        if len(b) > 140:
+            b = b[:137].rstrip() + "..."
+        clipped.append(b)
+    return clipped[:5]
 
-# ------------------------------------------------------------
-# Expansão de conteúdo (sem APIs externas)
-# ------------------------------------------------------------
-def expand_article(title: str, description: str, raw_content: str, source: str) -> str:
-    """
-    Gera 2–4 parágrafos com base no título + descrição + conteúdo bruto.
-    A ideia é substituir textos vazios por algo legível e único.
-    """
-    t = strip_html(title)
-    d = strip_html(description)
-    c = strip_html(raw_content)
+def build_body(article: Dict[str, Any]) -> str:
+    """Constrói corpo do post com garantias de qualidade mínima."""
+    raw_content = clean_text(article.get("content"))
+    desc = clean_text(article.get("description"))
+    title = clean_text(article.get("title") or "")
+    link = article.get("link") or article.get("url") or ""
 
-    # base “pontos” extraídos (muito simples, heurístico)
-    bullets = []
-    for line in (c or "").split("\n"):
-        line = line.strip(" •-*–—\t")
-        if 40 <= len(line) <= 160 and line[-1] != ":":
-            bullets.append(line)
-        if len(bullets) >= 5:
-            break
+    # remove frases de paywall/baixa qualidade
+    def strip_low_value(txt: str) -> str:
+        t = re.sub(r"\bONLY AVAILABLE.*?$", "", txt, flags=re.IGNORECASE)
+        t = re.sub(r"\bSubscribe now.*?$", "", t, flags=re.IGNORECASE)
+        return clean_text(t)
 
-    # 1) abertura
-    p1 = (
-        f"{t}. This article looks at why this story matters for the AI ecosystem and "
-        f"what you should know right now."
-        if t else
-        "This article highlights a recent development in artificial intelligence."
-    )
+    raw_content = strip_low_value(raw_content)
+    desc = strip_low_value(desc)
 
-    # 2) contexto + descrição
-    if d and not d.lower().startswith("http"):
-        p2 = (
-            f"{d} "
-            "Beyond the headline, the update ties into broader momentum around practical AI adoption, "
-            "model efficiency, and real-world integration."
-        )
+    # Se o conteúdo veio vazio ou muito curto, usa o description + resumo
+    core = raw_content if len(raw_content.split()) >= 60 else desc
+
+    # evita repetir título
+    if core.lower() == title.lower():
+        core = ""
+
+    # Se mesmo assim estiver curto, monta um corpo mínimo útil
+    if len(core.split()) < 60:
+        # parágrafo introdutório
+        intro = core if core else f"{title} — latest development in AI."
+
+        bullets = bulletize_from_description(desc or title)
+        bullets_block = ""
+        if bullets:
+            bullets_md = "\n".join([f"- {b}" for b in bullets])
+            bullets_block = f"\n\n**In short:**\n{bullets_md}"
+
+        read_more = f"\n\n[Read more]({link})" if link else ""
+        body = clean_text(intro) + bullets_block + read_more
     else:
-        # usa começo do conteúdo se a descrição for fraca
-        p2 = (
-            (c[:300] + "...") if c and len(c) > 320
-            else "In short, the announcement reflects the steady pace of innovation across the AI stack."
-        )
+        body = core
+        # acrescenta fonte se fizer sentido
+        if link and "http" in link and link not in body:
+            body = body + f"\n\n[Read more]({link})"
 
-    # 3) bullets (se existirem)
-    p3 = ""
-    if bullets:
-        items = "\n".join(f"- {b}" for b in bullets[:4])
-        p3 = f"**Key points:**\n{items}"
+    return body.strip()
 
-    # 4) encerramento
-    p4 = (
-        f"Looking ahead, we expect ongoing iteration and more practical deployments. "
-        f"Source: {source}."
-    )
 
-    # junta e normaliza
-    parts = [p1, p2]
-    if p3:
-        parts.append(p3)
-    parts.append(p4)
+def pick_image(article: Dict[str, Any]) -> Optional[str]:
+    """Escolhe a melhor imagem disponível."""
+    for key in ("image_url", "image", "thumbnail"):
+        url = clean_text(article.get(key))
+        if url and url.startswith("http"):
+            return url
+    return PLACEHOLDER_IMAGE  # pode ser None
 
-    body = "\n\n".join(parts)
 
-    # “endireita” espaços
-    body = re.sub(r"\n{3,}", "\n\n", body).strip()
-    # garante tamanho mínimo
-    if len(body) < MIN_BODY_CHARS and c:
-        # acrescenta mais contexto do conteúdo original
-        extra = re.sub(r"\s+", " ", c)
-        body = f"{body}\n\n{extra[:600]}..."
+def is_relevant(article: Dict[str, Any]) -> bool:
+    """Relevância rápida (evita ruído)."""
+    title = clean_text(article.get("title"))
+    desc = clean_text(article.get("description"))
 
-    return body
+    if not title:
+        return False
 
-# ------------------------------------------------------------
-# Fetch + criação de posts
-# ------------------------------------------------------------
-def fetch_latest(limit: int = MAX_POSTS) -> list[dict]:
+    text = f"{title}. {desc}".lower()
+    if looks_like_low_value(text):
+        return False
+
+    # tem de mencionar IA de forma plausível
+    if not re.search(r"\b(ai|artificial intelligence|machine learning)\b", text):
+        return False
+
+    return True
+
+
+def ensure_posts_dir():
+    os.makedirs(POSTS_DIR, exist_ok=True)
+
+
+def call_api(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Chama a API e devolve JSON, ou levanta para o caller."""
+    r = requests.get(API_URL, params=params, timeout=25)
+    # se a Newsdata devolver erro, deixa claro no log
+    try:
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        print(f"URL: {r.url}")
+        raise
+    return r.json()
+
+
+def fetch_latest(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
     """
-    Busca os artigos mais recentes (1 página) respeitando a query curta.
+    Busca artigos (pode paginar) respeitando o limite e as regras de qualidade.
     """
-    params = {
-        "apikey": API_KEY,
-        "q": QUERY,
-        "language": LANG,
-        "category": CATEGORY,
-        "page": 1,  # Uma página chega; erros anteriores foram por paginação/queries longas
-    }
-    data = api_get(params)
-    results = data.get("results") or []
-    # Newsdata por vezes devolve results = [] ou com estruturas diferentes
-    items = []
-    for r in results:
-        if isinstance(r, dict):
-            items.append(r)
-        if len(items) >= limit:
+    if not API_KEY:
+        raise ValueError("API_KEY não encontrada. Define NEWS_API_KEY (ou NEWSDATA_API_KEY).")
+
+    results: List[Dict[str, Any]] = []
+    page = 1
+
+    while len(results) < limit and page <= 3:  # até 3 páginas por segurança
+        params = {
+            "apikey": API_KEY,
+            "q": QUERY,
+            "language": LANG,
+            "category": CATEGORY,
+            "page": page,
+        }
+
+        data = call_api(params)
+        # Formato Newsdata: {"status": "success", "results": [ ... ]}
+        items = data.get("results") or []
+        if not isinstance(items, list) or not items:
             break
-    return items
 
-def create_post(article: dict) -> bool:
-    """
-    Constrói o ficheiro .md para o Jekyll.
-    Retorna True se criou, False se ignorou.
-    """
-    title = (article.get("title") or "").strip()
-    description = (article.get("description") or "").strip()
-    content_raw = (article.get("content") or "").strip()
-    link = article.get("link") or ""
-    source = (article.get("source_id") or "").strip()
-    image_url = article.get("image_url") or article.get("image") or ""
+        for art in items:
+            if len(results) >= limit:
+                break
 
-    # Vários filtros de qualidade
-    base_text = " ".join([title, description, content_raw])
-    if contains_banned(base_text):
-        return False
-    if looks_off_topic(base_text):
-        return False
-    if too_short(title, 15):
-        return False
+            if not is_relevant(art):
+                continue
 
-    # Expansão do corpo
-    body = expand_article(title, description, content_raw, source)
-    if too_short(body, MIN_BODY_CHARS):
-        return False
+            title = clean_text(art.get("title"))
+            desc = clean_text(art.get("description"))
+            cont = clean_text(art.get("content"))
 
-    # Excerpt
-    excerpt_src = description or content_raw or ""
-    excerpt = build_excerpt(excerpt_src)
-    if too_short(excerpt, MIN_EXCERPT_CHARS):
-        # se excerpt for fraco, gera a partir do body
-        excerpt = build_excerpt(body)
+            # bloco de baixa qualidade
+            all_txt = f"{title}\n{desc}\n{cont}".lower()
+            if looks_like_low_value(all_txt):
+                continue
 
-    # Data UTC (Jekyll yyyy-mm-dd)
-    d = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    slug = slugify(title)[:70] or "ai-update"
-    filename = uniquify_slug(d, slug)
-    filepath = POSTS_DIR / filename
+            # evita título == description
+            if title and desc and title.strip().lower() == desc.strip().lower():
+                continue
 
-    # Evita duplicados pelo título (se já existir ficheiro com slug base)
-    # (uniquify_slug já ajuda, mas se quiseres “não duplicar nunca”, usa este guard)
-    existing = list(POSTS_DIR.glob(f"{d}-{slug}*.md"))
-    if existing:
-        # Já fizemos um post com este título hoje
-        return False
+            # cria corpo e verifica tamanho
+            body_candidate = build_body(art)
+            if len(body_candidate.split()) < MIN_WORDS:
+                # ainda insuficiente → descartar
+                continue
 
-    # Front-matter + conteúdo
+            # passou!
+            art["_body"] = body_candidate
+            results.append(art)
+
+        page += 1
+
+    return results[:limit]
+
+
+def build_front_matter(article: Dict[str, Any]) -> Dict[str, Any]:
+    """Constrói front matter YAML em dicionário."""
+    title = clean_text(article.get("title"))
+    date_str = article.get("pubDate") or article.get("published_at") or ""
+    # Normaliza a data para YYYY-MM-DD
+    dt = None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S%z", "%Y-%m-%d", "%a, %d %b %Y %H:%M:%S %Z"):
+        try:
+            dt = datetime.strptime(date_str, fmt)
+            break
+        except Exception:
+            continue
+    if not dt:
+        dt = datetime.now(timezone.utc)
+
+    date_for_name = dt.strftime("%Y-%m-%d")
+    img = pick_image(article)
+
     fm = {
         "layout": "post",
         "title": title.replace('"', '\\"'),
-        "date": d,
-        "excerpt": excerpt.replace('"', '\\"'),
+        "date": date_for_name,
         "categories": ["ai", "news"],
-        "source": source,
-        "link": link,
     }
-    if image_url:
-        fm["image"] = image_url
 
-    front_matter = "---\n" + "\n".join(
-        f'{k}: "{v}"' if isinstance(v, str) else f"{k}: {json.dumps(v)}"
-        for k, v in fm.items()
-    ) + "\n---\n"
+    if img:
+        fm["image"] = img
 
-    md = front_matter + "\n" + body + "\n"
+    # excerpt curto para a listagem
+    excerpt_src = clean_text(article.get("description") or article.get("content") or "")
+    excerpt_src = re.sub(r"\s+", " ", excerpt_src).strip()
+    excerpt = excerpt_src[:MAX_EXCERPT_LEN].rstrip()
+    if excerpt:
+        fm["excerpt"] = excerpt
 
-    filepath.write_text(md, encoding="utf-8")
-    log(f"✅ Created: {filepath}")
-    return True
+    return fm, date_for_name
 
-# ------------------------------------------------------------
-# Main
-# ------------------------------------------------------------
+
+def write_post(article: Dict[str, Any]) -> Optional[str]:
+    """Escreve o ficheiro .md no _posts e devolve o nome, ou None se já existir."""
+    ensure_posts_dir()
+
+    title = clean_text(article.get("title"))
+    fm, date_for_name = build_front_matter(article)
+    slug = slugify(title)[:80] or "ai-news"
+    filename = f"{POSTS_DIR}/{date_for_name}-{slug}.md"
+
+    if os.path.exists(filename):
+        print(f"• Já existe: {filename} (salta)")
+        return None
+
+    # Corpo
+    body = article.get("_body") or build_body(article)
+    # Fonte
+    source_name = clean_text(article.get("source_id") or article.get("source") or "")
+    source_url = clean_text(article.get("link") or article.get("url") or "")
+
+    source_block = ""
+    if source_name or source_url:
+        # tenta mostrar "Source: <nome>" com link se houver
+        if source_url:
+            label = source_name if source_name else "source"
+            source_block = f"\n\nSource: [{label}]({source_url})"
+        else:
+            source_block = f"\n\nSource: {source_name}"
+
+    # Monta conteúdo final
+    # Front matter YAML
+    fm_yaml_lines = ["---"]
+    for k, v in fm.items():
+        if isinstance(v, list):
+            v_str = ", ".join(v)
+            fm_yaml_lines.append(f"{k}: [{v_str}]")
+        else:
+            fm_yaml_lines.append(f'{k}: "{v}"')
+    fm_yaml_lines.append("---\n")
+
+    final_md = "".join(l + "\n" for l in fm_yaml_lines) + body + source_block + "\n"
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(final_md)
+
+    print(f"✅ Criado: {filename}")
+    return filename
+
+
 def main():
+    print("🧠 Running update_posts.py...")
     if not API_KEY:
-        raise ValueError("API_KEY não encontrada. Define NEWSDATA_API_KEY (ou NEWS_API_KEY) em Secrets/Variables.")
+        raise ValueError("NEWS_API_KEY (ou NEWSDATA_API_KEY) não definido no repositório.")
 
-    log("🧠 Running update_posts.py...")
-    log("📰 Fetching latest AI articles...")
+    print("📰 Fetching latest AI articles...")
+    articles = fetch_latest(limit=MAX_POSTS)
+
+    if not articles:
+        print("⚠️ Nada para publicar (filtros de qualidade podem ter removido tudo).")
+        return
 
     created = 0
-    try:
-        items = fetch_latest(limit=MAX_POSTS)
-    except Exception as e:
-        log(f"❗ Erro ao obter artigos: {e}")
-        raise
+    for art in articles:
+        if write_post(art):
+            created += 1
 
-    for art in items:
-        try:
-            if create_post(art):
-                created += 1
-        except Exception as e:
-            log(f"⚠️ Skipped 1 article: {e}")
+    print(f"🎉 Done. {created} post(s) criados.")
 
-    if created == 0:
-        log("ℹ️ No new quality posts created (filters may have skipped weak items).")
-    else:
-        log(f"🎉 Done. Created {created} post(s).")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"❌ Erro: {e}")
+        raise
