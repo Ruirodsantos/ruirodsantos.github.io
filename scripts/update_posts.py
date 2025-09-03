@@ -5,7 +5,8 @@
 Fetch AI news from newsdata.io and create Jekyll posts in _posts/.
 - Uses short queries to avoid 'UnsupportedQueryLength'
 - Filters low-quality / irrelevant items
-- ALWAYS writes a body paragraph (no more blank posts)
+- ALWAYS writes a body paragraph (no blank posts)
+- OVERWRITES today's post file if it already exists (so we can fix older empties)
 """
 
 import os
@@ -29,10 +30,9 @@ API_KEY = os.getenv("NEWS_API_KEY")
 POSTS_DIR = "_posts"
 os.makedirs(POSTS_DIR, exist_ok=True)
 
-# Limit per run
-MAX_POSTS = 5
+MAX_POSTS = 5  # limit per run
 
-# Short, safe terms (each queried separately)
+# short, safe terms — each queried separately
 AI_QUERY_TERMS: List[str] = [
     "ai",
     "artificial intelligence",
@@ -47,11 +47,11 @@ AI_QUERY_TERMS: List[str] = [
     "apple ai",
 ]
 
-# Block obvious non-AI / low-value topics
+# block obvious non-AI/low-value items
 BLOCK_WORDS = [
     "premier league", "bundesliga", "rangers", "celtic", "brighton",
     "manchester city", "guardiola", "derbies",
-    "tacos",  # drive-thru viral
+    "tacos",
     "only available in paid plans",
 ]
 
@@ -80,7 +80,6 @@ def clean(text: Optional[str]) -> str:
     if not text:
         return ""
     t = re.sub(r"\s+", " ", text).strip()
-    # normalize quotes
     t = t.replace("“", '"').replace("”", '"').replace("’", "'")
     return t
 
@@ -117,7 +116,7 @@ def call_api(params: Dict[str, Any]) -> Dict[str, Any]:
     try:
         r.raise_for_status()
     except requests.HTTPError as e:
-        log(f"❌ API error: {r.text}")
+        log(f"❌ API error body: {r.text}")
         raise e
     data = r.json()
     if isinstance(data, dict) and data.get("status") == "error":
@@ -143,7 +142,7 @@ def yaml_front_matter(meta: Dict[str, Any]) -> str:
     lines = ["---"]
     for k in ("layout", "title", "date", "excerpt", "image", "source", "link"):
         v = meta.get(k)
-        if not v:
+        if v is None or v == "":
             continue
         if isinstance(v, str):
             v = v.replace('"', '\\"')
@@ -154,50 +153,56 @@ def yaml_front_matter(meta: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def safe_body(title: str, description: str, content: str, source: str) -> str:
+    """
+    Always return a non-empty body.
+    Priority: content -> description -> neutral fallback based on title.
+    """
+    body = content or description
+    if body:
+        return body.strip()
+    src = source or "the source"
+    return f"This article titled “{title}” was reported by {src}. Details were not provided by the feed, so we’ve included the headline and source link for quick reference."
+
+
 def write_post(item: Dict[str, Any]) -> Optional[str]:
     title = clean(item.get("title"))
     description = clean(item.get("description"))
     content = clean(item.get("content"))  # may be empty
     link = clean(item.get("link") or item.get("url") or "")
+    source = clean(item.get("source_id") or item.get("source") or "")
 
-    # pick a usable body so the page never looks blank
-    body = content or description
-    # if still empty, build a tiny neutral line
-    if not body:
-        body = f"This article titled “{title}” is from {clean(item.get('source_id') or item.get('source') or 'the source')}."
-
+    # quality filter
     if not is_good(title, description, content):
         return None
 
     date_str = today_str()
     slug = slugify(title)[:80] or "ai-news"
     path = f"{POSTS_DIR}/{date_str}-{slug}.md"
-    if os.path.exists(path):
-        return None  # already created today with same title
 
-    excerpt = first_sentence(description or content or body, 220)
+    # Build metadata + body (never empty)
+    body_text = safe_body(title, description, content, source)
+    excerpt = first_sentence(description or content or body_text, 220)
     meta = {
         "layout": "post",
         "title": title,
         "date": date_str,
         "excerpt": excerpt,
         "image": choose_image(item) or "",
-        "source": clean(item.get("source_id") or item.get("source") or ""),
+        "source": source,
         "link": link,
     }
-
     fm = yaml_front_matter(meta)
 
-    # Markdown body — always include at least something
-    body_md = body.strip()
     source_line = ""
-    if meta.get("source"):
-        source_line = f"\n\nSource: [{meta['source']}]({meta['link']})"
-    elif meta.get("link"):
-        source_line = f"\n\n[Read more]({meta['link']})"
+    if source and link:
+        source_line = f"\n\nSource: [{source}]({link})"
+    elif link:
+        source_line = f"\n\n[Read more]({link})"
 
-    md = f"{fm}\n\n{body_md}{source_line}\n"
+    md = f"{fm}\n\n{body_text}{source_line}\n"
 
+    # OVERWRITE today's file if it already exists to fix empty posts
     with open(path, "w", encoding="utf-8") as f:
         f.write(md)
 
@@ -248,7 +253,7 @@ def fetch_latest(max_posts: int = MAX_POSTS) -> List[Dict[str, Any]]:
             if link:
                 seen_links.add(link)
 
-        time.sleep(0.35)  # be nice to the API
+        time.sleep(0.35)  # be polite to the API
 
     return accepted[:max_posts]
 
@@ -265,10 +270,10 @@ def main() -> None:
             p = write_post(item)
             if p:
                 created += 1
-                log(f"✅ Post criado: {p}")
+                log(f"✅ Post escrito: {p}")
 
         if created == 0:
-            log("ℹ️ Nothing to write (duplicates/filtered).")
+            log("ℹ️ Nothing to write (filtered).")
 
     except Exception as e:
         log(f"❌ Falha: {e}")
