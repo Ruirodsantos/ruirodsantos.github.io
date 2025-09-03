@@ -10,7 +10,7 @@ import requests
 from slugify import slugify
 
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY")  # set in repo Variables, not Secrets
+API_KEY = os.getenv("NEWS_API_KEY")  # repo Variable
 MAX_POSTS = 5
 
 POSTS_DIR = Path("_posts")
@@ -30,17 +30,17 @@ KEYWORDS = [
 def clean_text(s: str) -> str:
     if not s:
         return ""
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+    return re.sub(r"\s+", " ", s).strip()
 
 def good_enough(text: str, min_chars: int = 140) -> bool:
     return text and len(text.strip()) >= min_chars
 
-def today_utc_date_str() -> str:
-    return dt.datetime.utcnow().strftime("%Y-%m-%d")
+def today_utc() -> str:
+    # strictly YYYY-MM-DD (UTC)
+    return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
 
 def fetch_today_articles() -> list[dict]:
-    """Fetch only today's items (UTC) from Newsdata.io."""
+    """Use requests params so query is always well-formed."""
     if not API_KEY:
         raise ValueError("API_KEY not found. Define repo variable NEWS_API_KEY.")
     q = " OR ".join(KEYWORDS)
@@ -50,25 +50,24 @@ def fetch_today_articles() -> list[dict]:
         "q": q,
         "language": "en",
         "category": "technology",
-        # force today-only window (UTC)
-        "from_date": today_utc_date_str(),
-        "to_date": today_utc_date_str(),
+        "from_date": today_utc(),
+        "to_date": today_utc(),
         "page": 1,
     }
     resp = requests.get(API_URL, params=params, timeout=30)
+    # For debugging you can uncomment the next line to see the final URL in logs:
+    # print("DEBUG URL:", resp.url)
     resp.raise_for_status()
     data = resp.json()
-
-    results = data.get("results") or []
-    return results
+    return data.get("results") or []
 
 def build_filename(date_str: str, title: str) -> Path:
     slug = slugify(title)[:70] or "post"
     return POSTS_DIR / f"{date_str}-{slug}.md"
 
 def already_exists_by_url(url: str) -> bool:
-    # Lightweight dedupe tag based on URL in file content
-    tag = hashlib.sha1(url.encode("utf-8")).hexdigest()[:12]
+    # check for a dedupe tag (sha1 of url) inside any existing post
+    tag = hashlib.sha1((url or "").encode("utf-8")).hexdigest()[:12]
     for p in POSTS_DIR.glob("*.md"):
         try:
             if tag in p.read_text(encoding="utf-8", errors="ignore"):
@@ -84,7 +83,6 @@ def make_post_md(article: dict, date_str: str) -> str:
     description = clean_text(article.get("description") or "")
     content = clean_text(article.get("content") or description)
 
-    # compact dedupe tag
     dedupe_tag = hashlib.sha1((link or title).encode("utf-8")).hexdigest()[:12]
 
     fm = {
@@ -96,7 +94,6 @@ def make_post_md(article: dict, date_str: str) -> str:
         "original_url": link,
         "_dedupe": dedupe_tag,
     }
-
     front_matter = "---\n" + "\n".join(
         f'{k}: "{v}"' if isinstance(v, str) else f"{k}: {json.dumps(v)}"
         for k, v in fm.items()
@@ -111,18 +108,12 @@ def make_post_md(article: dict, date_str: str) -> str:
 
 def main():
     created = 0
-    try:
-        articles = fetch_today_articles()
-    except Exception as e:
-        print(f"❌ API error: {e}")
-        raise
-
+    articles = fetch_today_articles()
     if not articles:
         print("ℹ️ No results for today (UTC).")
         return
 
-    # keep only items which truly have today's pubDate (UTC) and enough content
-    today = today_utc_date_str()
+    today = today_utc()
 
     for a in articles:
         if created >= MAX_POSTS:
@@ -133,15 +124,11 @@ def main():
             continue
 
         pub = (a.get("pubDate") or a.get("publishedAt") or "").strip()
-        # Extract YYYY-MM-DD; fallback to today if missing
         m = re.match(r"(\d{4}-\d{2}-\d{2})", pub)
         date_str = m.group(1) if m else today
-
         if date_str != today:
-            # strictly show only today's posts
             continue
 
-        # Text quality
         content = clean_text(a.get("content") or a.get("description") or "")
         if not good_enough(content):
             continue
@@ -150,10 +137,8 @@ def main():
         if url and already_exists_by_url(url):
             continue
 
-        # Build and write file
         path = build_filename(date_str, title)
         if path.exists():
-            # avoid duplicates by filename collision
             continue
 
         md = make_post_md(a, date_str)
@@ -161,10 +146,7 @@ def main():
         created += 1
         print(f"✅ Created: {path}")
 
-    if created == 0:
-        print("ℹ️ No new posts created for today.")
-    else:
-        print(f"🎉 Done. Created {created} post(s).")
+    print(f"🎉 Done. Created {created} post(s)." if created else "ℹ️ No new posts created for today.")
 
 if __name__ == "__main__":
     main()
