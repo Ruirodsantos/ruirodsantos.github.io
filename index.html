@@ -1,47 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>{{ page.title }}</title>
-  <link rel="stylesheet" href="/assets/style.css">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
-</head>
-<body>
-  <header>
-    <h1><a href="{{ '/' | relative_url }}">🧠 {{ site.title }}</a></h1>
-    <nav>
-      <a href="{{ '/' | relative_url }}">Home</a> |
-      <a href="{{ '/about.html' | relative_url }}">About</a> |
-      <a href="{{ '/contact.html' | relative_url }}">Contact</a>
-    </nav>
-  </header>
+---
+layout: default
+title: AI Discovery Blog
+---
 
-  <main>
-    <ins class="adsbygoogle"
-         style="display:block; text-align:center; margin-bottom: 20px;"
-         data-ad-client="ca-pub-7715134134171575"
-         data-ad-slot="1234567890"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-         (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
+<section class="home">
+  <h2>Latest Posts</h2>
 
-    <article>
-      <h2>{{ page.title }}</h2>
-      <p><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</p>
-
-      {% if page.image %}
-        <img src="{{ page.image }}" alt="{{ page.title }}" class="post-thumbnail" />
-      {% endif %}
-
-      {{ content }}
-    </article>
-    <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
-  </main>
-
-  <footer>
-    <p>&copy; {{ "now" | date: "%Y" }} {{ site.title }} | Powered by Adventis</p>
-  </footer>
-</body>
-</html>
+  <ul class="post-list">
+    {% for post in site.posts %}
+      <li class="post-item">
+        <a href="{{ post.url | relative_url }}"><h3>{{ post.title }}</h3></a>
+        <div class="post-meta">🗓 {{ post.date | date: "%B %d, %Y" }}</div>
+        <p class="post-excerpt">
+          {{ post.excerpt | strip_html | truncatewords: 40 }}
+        </p>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
