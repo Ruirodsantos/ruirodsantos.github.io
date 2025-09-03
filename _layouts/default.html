@@ -4,11 +4,13 @@
   <meta charset="UTF-8">
   <title>{{ page.title }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+
+  <!-- 🔗 RSS feed (jekyll-feed já gera /feed.xml) -->
+  <link rel="alternate" type="application/rss+xml" title="{{ site.title }} Feed" href="{{ '/feed.xml' | relative_url }}">
 
   <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575"
-     crossorigin="anonymous"></script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
 </head>
 <body>
   <header>
@@ -17,7 +19,9 @@
     <nav>
       <a href="{{ '/' | relative_url }}">Home</a> |
       <a href="{{ '/about.html' | relative_url }}">About</a> |
-      <a href="{{ '/contact.html' | relative_url }}">Contact</a>
+      <a href="{{ '/contact.html' | relative_url }}">Contact</a> |
+      <a href="{{ '/privacy.html' | relative_url }}">Privacy</a> |
+      <a href="{{ '/feed.xml' | relative_url }}">RSS</a>
     </nav>
   </header>
 
@@ -30,9 +34,7 @@
       <p>© {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved</p>
       <div class="social-icons">
         <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"/>
-          </svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
           EarnApp
         </a>
       </div>
