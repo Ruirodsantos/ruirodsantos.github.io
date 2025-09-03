@@ -19,29 +19,16 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests python-slugify
+          pip install requests python-slugify trafilatura
 
-      - name: Run update_posts.py (fetch new items)
+      - name: Run updater (fetch + enrich + write)
         run: |
-          echo "🧠 Running update_posts.py..."
-          python scripts/update_posts.py || true
+          python scripts/update_posts.py
 
-      - name: Repair existing short/empty posts (last 365 days)
-        run: |
-          echo "🧠 Repairing posts..."
-          python scripts/repair_posts.py
-
-      - name: Show changes
-        run: |
-          echo "---- git status ----"
-          git status
-          echo "---- recent diffs ----"
-          git diff --name-only
-
-      - name: Commit and push changes
+      - name: Commit & push
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add -A
-          git commit -m "🛠 Repair empties + auto-update posts" || echo "No changes to commit"
-          git push
+          git commit -m "🤖 Auto-update: enriched AI posts" || echo "No changes"
+          git push || true
