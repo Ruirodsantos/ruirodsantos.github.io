@@ -9,36 +9,29 @@ from slugify import slugify
 
 # === CONFIG ===
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY")  # <-- you already created this secret
-MAX_POSTS = 5                        # how many posts to create per run
+API_KEY = os.getenv("NEWS_API_KEY")  # repo secret
+MAX_POSTS = 5
 POSTS_DIR = "_posts"
 
-# keywords (kept short so we don't trigger 422 Unprocessable Entity)
 QUERY = "artificial intelligence OR AI OR machine learning OR generative ai OR llm"
 LANG = "en"
-CATEGORY = "technology"  # safe category for Newsdata
+CATEGORY = "technology"
 
 
-def ensure_api_key():
+def require_api_key():
     if not API_KEY:
-        raise ValueError("❌ API key not found. Define the repository secret NEWS_API_KEY.")
+        raise ValueError("❌ NEWS_API_KEY is not set (repo secret).")
 
 
-def dt_utcnow():
-    """UTC 'now' with tzinfo (avoid deprecated utcnow())."""
+def utcnow():
     return datetime.now(timezone.utc)
 
 
 def sanitize_title(title: str) -> str:
-    """Make a YAML/filename-safe title."""
-    title = title.strip()
-    # replace double quotes for YAML
-    title = title.replace('"', '\\"')
-    return title
+    return title.strip().replace('"', '\\"')
 
 
 def best_date(article: dict) -> datetime.date:
-    """Figure out the best date to use for filename/front-matter."""
     for key in ("pubDate", "pub_date", "date", "published_at"):
         val = article.get(key)
         if val:
@@ -49,8 +42,7 @@ def best_date(article: dict) -> datetime.date:
                 return d.date()
             except Exception:
                 pass
-    # fallback to today UTC
-    return dt_utcnow().date()
+    return utcnow().date()
 
 
 def short_excerpt(text: str, limit: int = 220) -> str:
@@ -60,66 +52,94 @@ def short_excerpt(text: str, limit: int = 220) -> str:
     return (text[: limit - 1] + "…") if len(text) > limit else text
 
 
+def _call(params):
+    r = requests.get(API_URL, params=params, timeout=30)
+    # return both status + json to let caller decide
+    try:
+        data = r.json()
+    except Exception:
+        data = {}
+    return r.status_code, data
+
+
 def fetch_latest():
     """
-    Get latest items for the last 24h. If the full query 422s,
-    retry once with a simpler query w/o category.
+    Progressive fallback to avoid 422:
+      1) q + language + category + from/to
+      2) q + language + from/to
+      3) q + language + category
+      4) q + language
     """
-    now = dt_utcnow()
+    now = utcnow()
     since = now - timedelta(hours=24)
 
-    def _call(params):
-        r = requests.get(API_URL, params=params, timeout=30)
-        # let caller see the status if not ok
-        if r.status_code == 422:
-            # bubble to retry branch
-            r.raise_for_status()
-        r.raise_for_status()
-        return r.json()
-
-    base_params = {
-        "apikey": API_KEY,
-        "q": QUERY,
-        "language": LANG,
-        "category": CATEGORY,
-        "from_date": since.strftime("%Y-%m-%d"),
-        "to_date": now.strftime("%Y-%m-%d"),
-        "page": 1,
-    }
-
-    try:
-        data = _call(base_params)
-    except requests.HTTPError:
-        # Retry with a smaller query set (avoid category + long query)
-        retry_params = {
+    variants = [
+        # Most specific
+        {
             "apikey": API_KEY,
-            "q": "artificial intelligence OR AI",
+            "q": QUERY,
+            "language": LANG,
+            "category": CATEGORY,
+            "from_date": since.strftime("%Y-%m-%d"),
+            "to_date": now.strftime("%Y-%m-%d"),
+            "page": 1,
+        },
+        # No category
+        {
+            "apikey": API_KEY,
+            "q": QUERY,
             "language": LANG,
             "from_date": since.strftime("%Y-%m-%d"),
             "to_date": now.strftime("%Y-%m-%d"),
             "page": 1,
-        }
-        data = _call(retry_params)
+        },
+        # No dates
+        {
+            "apikey": API_KEY,
+            "q": QUERY,
+            "language": LANG,
+            "category": CATEGORY,
+            "page": 1,
+        },
+        # Minimal
+        {
+            "apikey": API_KEY,
+            "q": "artificial intelligence OR AI",
+            "language": LANG,
+            "page": 1,
+        },
+    ]
 
-    items = data.get("results", []) or []
+    chosen_results = None
+    last_err = None
 
-    # Keep only items that have enough content to be useful
+    for ix, params in enumerate(variants, start=1):
+        code, data = _call(params)
+        if code == 200 and isinstance(data, dict) and data.get("results"):
+            chosen_results = data["results"]
+            break
+        else:
+            last_err = f"Variant {ix} -> status {code}, data keys: {list(data.keys()) if isinstance(data, dict) else 'N/A'}"
+
+    if chosen_results is None:
+        raise RuntimeError(f"All query variants failed. Last error: {last_err}")
+
+    # Clean & dedupe
     cleaned = []
-    seen_titles = set()
-    for a in items:
+    seen = set()
+    for a in chosen_results:
         title = (a.get("title") or "").strip()
         desc = (a.get("description") or "").strip()
         link = a.get("link")
         if not title or not desc or not link:
             continue
-        # de-dup by normalized title
         norm = re.sub(r"\s+", " ", title.lower())
-        if norm in seen_titles:
+        if norm in seen:
             continue
-        seen_titles.add(norm)
+        seen.add(norm)
         cleaned.append(a)
 
-    # sort by their publication date (desc)
+    # Sort desc by pub date
     def _ts(article):
         try:
             return dateparser.parse(article.get("pubDate") or article.get("pub_date") or "")
@@ -138,17 +158,16 @@ def build_markdown(article: dict) -> str:
     image = article.get("image_url") or ""
     excerpt = short_excerpt(article.get("content") or article.get("description") or "")
 
-    fm_lines = [
+    fm = [
         "---",
-        'layout: post',
+        "layout: post",
         f'title: "{title}"',
         f"date: {date}",
     ]
     if image:
-        fm_lines.append(f'image: "{image}"')
-    fm_lines.append('categories: [ai, news]')
-    fm_lines.append("---")
-    front_matter = "\n".join(fm_lines)
+        fm.append(f'image: "{image}"')
+    fm.append("categories: [ai, news]")
+    fm.append("---")
 
     body = textwrap.dedent(
         f"""
@@ -158,40 +177,38 @@ def build_markdown(article: dict) -> str:
         """
     ).strip()
 
-    return f"{front_matter}\n\n{body}\n"
+    return "\n".join(fm) + "\n\n" + body + "\n"
 
 
 def write_post(article: dict) -> str:
-    """Write a post file and return the path."""
     date = best_date(article)
     slug = slugify(article["title"])[:60]
-    filename = f"{date}-{slug}.md"
-    path = os.path.join(POSTS_DIR, filename)
+    name = f"{date}-{slug}.md"
+    path = os.path.join(POSTS_DIR, name)
     os.makedirs(POSTS_DIR, exist_ok=True)
-    content_md = build_markdown(article)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(content_md)
+        f.write(build_markdown(article))
     return path
 
 
 def main():
-    ensure_api_key()
+    require_api_key()
     items = fetch_latest()
     if not items:
-        print("⚠️ No fresh items found in the last 24h.")
+        print("⚠️ No fresh items.")
         return
     written = []
     for art in items:
         try:
             written.append(write_post(art))
         except Exception as e:
-            print(f"❌ Skipped one item: {e}")
+            print("❌ Skipped one:", e)
     if written:
         print("✅ Created posts:")
         for p in written:
             print(" -", p)
     else:
-        print("⚠️ Nothing written (all items skipped).")
+        print("⚠️ Nothing written.")
 
 
 if __name__ == "__main__":
