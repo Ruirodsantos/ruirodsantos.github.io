@@ -1,12 +1,10 @@
 ---
 layout: post
-title: "Is the use of artificial intelligence in the classroom a pro or a con?"
+title: Is the use of artificial intelligence in the classroom a pro or a con?
 date: 2025-09-02
 image: "https://ewscripps.brightspotcdn.com/dims4/default/9d821b0/2147483647/strip/true/crop/500x263+0+36/resize/1200x630!/quality/90/?url=https%3A%2F%2Fewscripps.brightspotcdn.com%2F77%2F73%2F533f5f5148eab874673d3a1e546d%2Fshutterstock-2036186228.jpg"
 excerpt: "A new school year is upon us, and so is the use of new technology — and that raises the question: Should teachers and students be utilizing artificial intelligence in their classrooms?"
 categories: [ai, news]
 ---
 
-Source: [kgun9](https://www.kgun9.com/us-news/education/is-the-use-of-artificial-intelligence-in-the-classroom-a-pro-or-a-con)
-
-ONLY AVAILABLE IN PAID PLANS
+A new school year is upon us, and so is the use of new technology — and that raises the question: Should teachers and students be utilizing artificial intelligence in their classrooms?
