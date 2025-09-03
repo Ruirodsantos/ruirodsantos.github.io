@@ -2,48 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>{{ page.title }}</title>
-  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
-  <!-- Google AdSense -->
+  <title>{{ page.title | default: site.title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}" />
+  <!-- AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
 </head>
 <body>
   <header>
     <h1><a href="{{ '/' | relative_url }}">🧠 {{ site.title }}</a></h1>
     <nav>
-      <a href="{{ '/' | relative_url }}">Home</a>
-      <a href="{{ '/about.html' | relative_url }}">About</a>
+      <a href="{{ '/' | relative_url }}">Home</a> |
+      <a href="{{ '/about.html' | relative_url }}">About</a> |
       <a href="{{ '/contact.html' | relative_url }}">Contact</a>
     </nav>
   </header>
 
   <main>
-    <!-- Ad block before content -->
-    <ins class="adsbygoogle"
-         style="display:block; text-align:center; margin-bottom: 20px;"
-         data-ad-client="ca-pub-7715134134171575"
-         data-ad-slot="1234567890"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-
     {{ content }}
   </main>
 
   <footer>
     <div class="footer-inner">
-      <div class="copyright">
-        © {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved.
+      <div class="footer-copy">
+        © {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved
       </div>
+
       <div class="social-icons">
-        <!-- EarnApp referral -->
-        <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener noreferrer" title="EarnApp">
-          <!-- SVG de “moeda” simples -->
+        <!-- EarnApp referral button -->
+        <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"></circle>
-            <text x="12" y="16" text-anchor="middle" font-size="10" fill="#111" font-weight="700">$</text>
+            <path d="M12 2a10 10 0 100 20 10 10 0 000-20Zm1 5v5h4v2h-6V7h2Z"/>
           </svg>
-          <span>Earn</span>
+          Earn with me
         </a>
       </div>
     </div>
