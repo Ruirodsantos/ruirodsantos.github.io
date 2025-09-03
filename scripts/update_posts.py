@@ -1,183 +1,120 @@
 import os
 import re
-import textwrap
-import datetime as dt
-from pathlib import Path
+import json
 import requests
+from datetime import datetime, timedelta
 from slugify import slugify
 
-# === Config ===
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY") or os.getenv("NEWSDATA_API_KEY")  # aceita qualquer um dos dois
+API_KEY = os.getenv("NEWS_API_KEY") or os.getenv("NEWSDATA_API_KEY")  # support either name
 if not API_KEY:
-    raise ValueError("❌ API_KEY não encontrada. Define 'NEWS_API_KEY' (ou 'NEWSDATA_API_KEY') em Secrets/Variables.")
+    raise ValueError("API_KEY not found. Set NEWS_API_KEY or NEWSDATA_API_KEY in repo secrets/vars.")
 
-# Palavras-chave (mais amplas para variedade)
-KEYWORDS = [
-    "artificial intelligence", "AI", "machine learning", "generative ai",
-    "openai", "anthropic", "google ai", "meta ai", "microsoft ai", "stability ai",
-    "robotics", "lmm", "agents", "ai policy", "ai safety",
-]
+POSTS_DIR = "_posts"
+os.makedirs(POSTS_DIR, exist_ok=True)
 
-POSTS_DIR = Path("_posts")
-POSTS_DIR.mkdir(exist_ok=True)
+# Keywords/themes we DO want
+QUERY = "artificial intelligence OR AI OR generative ai OR llm OR openai OR anthropic OR google ai OR meta ai"
 
-# Parâmetros de qualidade
-MIN_DESC_CHARS = 140         # mínimo de chars na descrição/conteúdo
-MAX_POSTS_PER_RUN = 5        # quantos posts gerar por execução
-BLOCK_DUP_TITLES = True      # evita gerar posts com o mesmo título no mesmo dia
+# Obvious non-AI/schedule/sports blacklists
+TITLE_BLACKLIST = re.compile(
+    r"(broadcasts?|fixtures?|schedule|tv\s+guide|premier league|bundesliga|rangers|celtic|espn|disney\+|kickoff|"
+    r"line\s?up|derbies|round\s?\d+|vs\.)",
+    re.IGNORECASE
+)
 
-def today_iso():
-    # usar UTC para consistência
-    return dt.datetime.utcnow().date().isoformat()
+# Phrase that indicates paywalled junk
+PAYWALL_PHRASE = "ONLY AVAILABLE IN PAID PLANS"
 
-def fetch_latest_variants():
-    """
-    Tenta algumas variantes de query para melhorar a taxa de acerto.
-    Gera no máx. MAX_POSTS_PER_RUN items.
-    """
-    base_queries = [
-        " OR ".join(KEYWORDS),
-        "artificial intelligence OR generative ai OR machine learning",
-        "openai OR anthropic OR google ai OR meta ai OR microsoft ai",
-    ]
-    items = []
-    seen_ids = set()
+MAX_PER_RUN = int(os.getenv("POSTS_PER_RUN", "5"))
 
-    params_common = {
+def fetch_latest():
+    params = {
         "apikey": API_KEY,
+        "q": QUERY,
         "language": "en",
+        "category": "technology",
         "page": 1,
     }
+    r = requests.get(API_URL, params=params, timeout=30)
+    r.raise_for_status()
+    data = r.json()
+    return data.get("results", [])
 
-    last_err = None
-    for q in base_queries:
-        params = dict(params_common)
-        params["q"] = q
-        try:
-            res = requests.get(API_URL, params=params, timeout=30)
-            res.raise_for_status()
-            data = res.json() or {}
-            results = data.get("results") or []
-            for art in results:
-                aid = art.get("article_id") or art.get("link")
-                if not aid or aid in seen_ids:
-                    continue
-                seen_ids.add(aid)
-                items.append(art)
-                if len(items) >= MAX_POSTS_PER_RUN:
-                    return items
-        except Exception as e:
-            last_err = e
-            continue
+def looks_bad(article):
+    title = (article.get("title") or "").strip()
+    desc = (article.get("description") or "").strip()
+    content = (article.get("content") or "").strip()
 
-    if not items and last_err:
-        # nada apanhado em nenhuma variante
-        raise RuntimeError(f"All query variants failed. Last error: {last_err}")
-    return items
-
-def pick_image(article: dict) -> str | None:
-    # newsdata.io possíveis chaves
-    for key in ("image_url", "image", "thumbnail", "urlToImage"):
-        url = article.get(key)
-        if isinstance(url, str) and url.startswith("http"):
-            return url
-    return None
-
-def looks_low_quality(title: str, desc: str | None, content: str | None) -> bool:
-    if not title or len(title) < 8:
+    # obvious sports/schedule stuff
+    if TITLE_BLACKLIST.search(title):
         return True
-    # usa content se existir, senão desc
-    body = (content or "").strip() or (desc or "").strip()
-    # remove espaços múltiplos
-    body = re.sub(r"\s+", " ", body)
-    # muito curto?
-    if len(body) < MIN_DESC_CHARS:
+
+    # too short body
+    body = content or desc
+    if len(body) < 140:
         return True
-    # igual ao título (quase)
-    if body.lower().startswith(title.lower()):
-        if len(body) <= len(title) + 10:
-            return True
+
+    # paywalled marker
+    if PAYWALL_PHRASE.lower() in body.lower():
+        return True
+
     return False
 
-def normalize_excerpt(text: str, max_chars=300) -> str:
-    text = re.sub(r"\s+", " ", (text or "")).strip()
-    return text[:max_chars].rstrip() + ("…" if len(text) > max_chars else "")
+def make_post(article):
+    # date
+    iso = article.get("pubDate") or ""
+    try:
+        d = datetime.strptime(iso, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        d = datetime.utcnow()
+    date_str = d.strftime("%Y-%m-%d")
 
-def filename_for(date_str: str, title: str) -> Path:
-    base = slugify(title)[:60]
-    return POSTS_DIR / f"{date_str}-{base}.md"
-
-def already_exists(date_str: str, title: str) -> bool:
-    # ver se existe ficheiro com a mesma data e título similar
+    title = article["title"].strip()
     slug = slugify(title)[:60]
-    pattern = f"{date_str}-{slug}.md"
-    return (POSTS_DIR / pattern).exists()
+    filename = f"{date_str}-{slug}.md"
+    path = os.path.join(POSTS_DIR, filename)
 
-def build_post_md(date_str: str, title: str, excerpt: str, source_name: str, url: str, image_url: str | None, body: str) -> str:
-    fm_lines = [
+    source = article.get("source_id") or "source"
+    link = article.get("link") or ""
+    desc = (article.get("description") or "").strip()
+    content = (article.get("content") or desc).strip()
+
+    # front matter + content
+    fm = [
         "---",
-        f'title: "{title.replace("\\\"", "\\\\\\"")}"',
+        f'title: "{title.replace(\'"\', "\\\"")}"',
         f"date: {date_str}",
-        'layout: post',
-        "categories: [ai, news]",
+        f"source: {source}",
+        f"link: {link}",
+        "layout: post",
+        "---",
+        "",
     ]
-    if image_url:
-        fm_lines.append(f"image: {image_url}")
-    fm_lines.append(f'excerpt: "{excerpt.replace("\\\"", "\\\\\\"")}"')
-    fm_lines.append("---")
-
-    md = "\n".join(fm_lines) + "\n\n"
-    md += textwrap.dedent(f"""\
-        {body}
-
-        ---
-        **Source:** [{source_name}]({url})
-    """)
-    return md
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(fm))
+        f.write(content if content else desc)
+        f.write("\n")
+    return path
 
 def main():
-    date_str = today_iso()
-    items = fetch_latest_variants()
-
+    results = fetch_latest()
     created = 0
-    for art in items:
-        title = (art.get("title") or "").strip()
-        desc = (art.get("description") or art.get("summary") or "").strip()
-        content = (art.get("content") or "").strip()
-        url = art.get("link") or art.get("url") or "#"
-        source_name = (art.get("source_id") or art.get("source") or "Source").strip()
-
-        if looks_low_quality(title, desc, content):
-            # salta fracos
+    for art in results:
+        if not art.get("title"):
             continue
-
-        if BLOCK_DUP_TITLES and already_exists(date_str, title):
+        if looks_bad(art):
             continue
-
-        image_url = pick_image(art)
-        body = (content or desc).strip()
-        excerpt = normalize_excerpt(body, max_chars=240)
-
-        md = build_post_md(
-            date_str=date_str,
-            title=title,
-            excerpt=excerpt,
-            source_name=source_name,
-            url=url,
-            image_url=image_url,
-            body=body
-        )
-
-        path = filename_for(date_str, title)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(md)
-        created += 1
-
-        if created >= MAX_POSTS_PER_RUN:
+        try:
+            p = make_post(art)
+            created += 1
+            print(f"✅ Created: {p}")
+        except Exception as e:
+            print(f"❌ Skip due to error: {e}")
+        if created >= MAX_PER_RUN:
             break
 
-    print(f"✅ Posts criados: {created}")
+    print(f"Done. Created {created} post(s).")
 
 if __name__ == "__main__":
     main()
