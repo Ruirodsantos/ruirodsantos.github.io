@@ -9,7 +9,7 @@ from slugify import slugify
 
 # === CONFIG ===
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY")  # repo secret
+API_KEY = os.getenv("NEWS_API_KEY")  # set in repo Secrets
 MAX_POSTS = 5
 POSTS_DIR = "_posts"
 
@@ -18,9 +18,9 @@ LANG = "en"
 CATEGORY = "technology"
 
 
-def require_api_key():
+def have_key():
     if not API_KEY:
-        raise ValueError("❌ NEWS_API_KEY is not set (repo secret).")
+        raise ValueError("❌ NEWS_API_KEY is not set (repository secret).")
 
 
 def utcnow():
@@ -53,47 +53,67 @@ def short_excerpt(text: str, limit: int = 220) -> str:
 
 
 def _call(params):
-    r = requests.get(API_URL, params=params, timeout=30)
-    # return both status + json to let caller decide
+    """
+    Perform the API call and ALWAYS return (status_code, json_dict)
+    If JSON parsing fails, return {} as the dict.
+    """
     try:
-        data = r.json()
-    except Exception:
-        data = {}
-    return r.status_code, data
+        r = requests.get(API_URL, params=params, timeout=30)
+        try:
+            data = r.json()
+        except Exception:
+            data = {}
+        return r.status_code, data
+    except Exception as e:
+        # network error
+        return 0, {"status": "error", "results": str(e)}
+
+
+def extract_items(data):
+    """
+    Return a list of article dicts if present, else [].
+    Newsdata sometimes sends 'results' as list even with 422.
+    """
+    if not isinstance(data, dict):
+        return []
+    results = data.get("results")
+    if isinstance(results, list):
+        return results
+    return []
 
 
 def fetch_latest():
     """
-    Progressive fallback to avoid 422:
-      1) q + language + category + from/to
-      2) q + language + from/to
-      3) q + language + category
-      4) q + language
+    Progressive fallbacks. We now accept any HTTP status as long as we
+    get a non-empty 'results' list of items that look like articles.
     """
     now = utcnow()
     since = now - timedelta(hours=24)
 
+    date_from = since.strftime("%Y-%m-%d")
+    date_to = now.strftime("%Y-%m-%d")
+
     variants = [
-        # Most specific
+        # 1) Most specific
         {
             "apikey": API_KEY,
             "q": QUERY,
             "language": LANG,
             "category": CATEGORY,
-            "from_date": since.strftime("%Y-%m-%d"),
-            "to_date": now.strftime("%Y-%m-%d"),
+            "from_date": date_from,
+            "to_date": date_to,
             "page": 1,
         },
-        # No category
+        # 2) No category
         {
             "apikey": API_KEY,
             "q": QUERY,
             "language": LANG,
-            "from_date": since.strftime("%Y-%m-%d"),
-            "to_date": now.strftime("%Y-%m-%d"),
+            "from_date": date_from,
+            "to_date": date_to,
             "page": 1,
         },
-        # No dates
+        # 3) No dates
         {
             "apikey": API_KEY,
             "q": QUERY,
@@ -101,7 +121,7 @@ def fetch_latest():
             "category": CATEGORY,
             "page": 1,
         },
-        # Minimal
+        # 4) Minimal
         {
             "apikey": API_KEY,
             "q": "artificial intelligence OR AI",
@@ -110,44 +130,49 @@ def fetch_latest():
         },
     ]
 
-    chosen_results = None
-    last_err = None
-
+    last_note = None
     for ix, params in enumerate(variants, start=1):
         code, data = _call(params)
-        if code == 200 and isinstance(data, dict) and data.get("results"):
-            chosen_results = data["results"]
-            break
+        items = extract_items(data)
+        if items:
+            # Filter valid-looking articles
+            valid = []
+            seen = set()
+            for a in items:
+                title = (a.get("title") or "").strip()
+                desc = (a.get("description") or "").strip()
+                link = a.get("link")
+                if not title or not desc or not link:
+                    continue
+                norm = re.sub(r"\s+", " ", title.lower())
+                if norm in seen:
+                    continue
+                seen.add(norm)
+                valid.append(a)
+
+            # Sort by pub date desc
+            def _ts(article):
+                try:
+                    return dateparser.parse(
+                        article.get("pubDate") or article.get("pub_date") or ""
+                    )
+                except Exception:
+                    return datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+            valid.sort(key=_ts, reverse=True)
+            if valid:
+                print(f"✅ Using variant {ix} (status {code}) with {len(valid)} items")
+                return valid[:MAX_POSTS]
+            else:
+                last_note = f"Variant {ix} had results but none valid."
         else:
-            last_err = f"Variant {ix} -> status {code}, data keys: {list(data.keys()) if isinstance(data, dict) else 'N/A'}"
+            last_note = (
+                f"Variant {ix} returned status {code} with keys "
+                f"{list(data.keys()) if isinstance(data, dict) else 'N/A'}"
+            )
 
-    if chosen_results is None:
-        raise RuntimeError(f"All query variants failed. Last error: {last_err}")
-
-    # Clean & dedupe
-    cleaned = []
-    seen = set()
-    for a in chosen_results:
-        title = (a.get("title") or "").strip()
-        desc = (a.get("description") or "").strip()
-        link = a.get("link")
-        if not title or not desc or not link:
-            continue
-        norm = re.sub(r"\s+", " ", title.lower())
-        if norm in seen:
-            continue
-        seen.add(norm)
-        cleaned.append(a)
-
-    # Sort desc by pub date
-    def _ts(article):
-        try:
-            return dateparser.parse(article.get("pubDate") or article.get("pub_date") or "")
-        except Exception:
-            return datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-    cleaned.sort(key=_ts, reverse=True)
-    return cleaned[:MAX_POSTS]
+    print(f"⚠️ All query variants produced no usable items. Last note: {last_note}")
+    return []
 
 
 def build_markdown(article: dict) -> str:
@@ -192,10 +217,11 @@ def write_post(article: dict) -> str:
 
 
 def main():
-    require_api_key()
+    have_key()
     items = fetch_latest()
     if not items:
-        print("⚠️ No fresh items.")
+        print("ℹ️ No posts created today (API returned no usable results).")
+        # exit 0 so GitHub Actions doesn't fail the job
         return
     written = []
     for art in items:
@@ -208,7 +234,7 @@ def main():
         for p in written:
             print(" -", p)
     else:
-        print("⚠️ Nothing written.")
+        print("ℹ️ Nothing written (all candidates filtered out).")
 
 
 if __name__ == "__main__":
