@@ -2,333 +2,319 @@
 # -*- coding: utf-8 -*-
 
 """
-scripts/update_posts.py
-Gera posts Jekyll a partir da Newsdata API com filtros de qualidade.
-- Pede até 5 artigos (podes alterar MAX_POSTS)
-- Evita artigos de baixa qualidade (pagos, vazios, desporto, etc.)
-- Usa paginação via nextPage
+Auto-fetch AI news from Newsdata and create Jekyll posts.
+- Splits queries into short variants to avoid 422 'UnsupportedQueryLength'
+- Filters low-quality / irrelevant items
+- Writes Markdown files into _posts/
+
+Env:
+  NEWS_API_KEY   -> your newsdata.io API key (public key is fine)
 """
 
 import os
 import re
-import sys
-import json
 import time
-import textwrap
+import json
 import datetime as dt
-from pathlib import Path
+from typing import List, Dict, Any, Optional
 
 import requests
 from slugify import slugify
 
-# ==========================
-# Configuração
-# ==========================
-API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY") or os.getenv("NEWSDATA_API_KEY")
 
-# Palavras AI (busca)
-AI_QUERY_TERMS = [
+# ========================
+# Configuration
+# ========================
+
+API_URL = "https://newsdata.io/api/1/news"
+API_KEY = os.getenv("NEWS_API_KEY")
+
+POSTS_DIR = "_posts"
+os.makedirs(POSTS_DIR, exist_ok=True)
+
+# How many good posts per run
+MAX_POSTS = 5
+
+# Short, safe search terms (each is sent separately)
+AI_QUERY_TERMS: List[str] = [
+    "ai",
     "artificial intelligence",
-    "AI",
-    "machine learning",
-    "generative ai",
     "openai",
     "anthropic",
+    "llm",
+    "deepmind",
     "google ai",
     "meta ai",
-    "llm",
+    "microsoft ai",
+    "nvidia ai",
+    "apple ai",
 ]
 
-# Palavras a evitar (desporto / temas fora de AI que têm aparecido)
-BANNED_TERMS = [
-    # futebol / desporto
-    "premier league", "bundesliga", "rangers", "celtic", "guardiola",
-    "manchester city", "brighton", "espn", "disney+", "derbies",
-    # entretenimento / soap opera
-    "general hospital", "soap opera",
-    # artigos puramente regionais de tv
-    "broadcasts:", "sunday:", "fixtures",
-]
-
-# Frases que indicam conteúdo fechado / fraco
-PAID_WALL_MARKERS = [
+# Filters (lowercased) for obvious non-AI content we saw popping up
+BLOCK_WORDS = [
+    "premier league",
+    "bundesliga",
+    "rangers",
+    "celtic",
+    "brighton",
+    "manchester city",
+    "guardiola",
+    "derbies",
+    "bundesliga on of",
+    "tacos",  # drive-thru viral
     "only available in paid plans",
-    "subscribe to read the full",
-    "subscription required",
 ]
 
-# Pastas/limites
-POSTS_DIR = Path("_posts")
-POSTS_DIR.mkdir(parents=True, exist_ok=True)
+# Minimal text lengths
+MIN_TITLE_LEN = 12
+MIN_EXCERPT_LEN = 40
 
-MAX_POSTS = int(os.getenv("MAX_POSTS", "5"))  # quantos posts criar
-MIN_DESC_CHARS = 160                           # desc mínima aceitável
-MIN_CONTENT_CHARS = 280                        # conteúdo mínimo aceitável
-
-# ==========================
-# Utilitários
-# ==========================
+# ========================
+# Helpers
+# ========================
 
 def log(msg: str) -> None:
     print(msg, flush=True)
 
-def today_ymd() -> str:
-    return dt.datetime.utcnow().date().isoformat()
 
-def sanitize_text(s: str) -> str:
-    """Limpa espaços, remove html simples, normaliza quotes."""
-    if not s:
+def api_key_or_die() -> None:
+    if not API_KEY:
+        raise ValueError("❌ API_KEY não encontrada. Define o secret NEWS_API_KEY em Settings → Secrets and variables → Actions.")
+
+
+def utc_date_str() -> str:
+    # Jekyll expects YYYY-MM-DD
+    return dt.datetime.utcnow().strftime("%Y-%m-%d")
+
+
+def sanitize_text(text: Optional[str]) -> str:
+    if not text:
         return ""
-    s = re.sub(r"<[^>]+>", " ", s)    # remove tags html
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+    # remove excessive whitespace and strange chars
+    t = re.sub(r"\s+", " ", text).strip()
+    # collapse quotes safely (no gymnastics inside f-strings)
+    t = t.replace("“", '"').replace("”", '"').replace("’", "'")
+    return t
 
-def too_sporty(text: str) -> bool:
-    text_l = text.lower()
-    return any(term in text_l for term in BANNED_TERMS)
 
-def looks_paywalled(text: str) -> bool:
-    text_l = text.lower()
-    return any(marker in text_l for marker in PAID_WALL_MARKERS)
+def good_quality(title: str, excerpt: str, content: str) -> bool:
+    t = title.lower()
+    e = (excerpt or "").lower()
+    c = (content or "").lower()
 
-def good_quality(title: str, desc: str, content: str) -> bool:
-    """Heurística simples de qualidade."""
-    t = sanitize_text(title)
-    d = sanitize_text(desc)
-    c = sanitize_text(content)
-
-    # não pode estar vazio
-    if not t:
+    if len(title) < MIN_TITLE_LEN:
         return False
 
-    # evitar títulos repetidos no excerpt
-    if d and d.lower() == t.lower():
-        return False
+    # discard items with the “paid plan” message or blocked topics
+    all_text = " ".join([t, e, c])
+    for w in BLOCK_WORDS:
+        if w in all_text:
+            return False
 
-    # rejeitar paywall markers
-    if looks_paywalled(d) or looks_paywalled(c):
-        return False
-
-    # rejeitar desporto / fora de tema óbvio
-    if too_sporty(" ".join([t, d, c])):
-        return False
-
-    # algum conteúdo mínimo
-    if (len(c) < MIN_CONTENT_CHARS) and (len(d) < MIN_DESC_CHARS):
+    # very short preview? likely useless
+    if len(excerpt) < MIN_EXCERPT_LEN and len(content) < MIN_EXCERPT_LEN:
         return False
 
     return True
 
-def clamp_excerpt(text: str, max_chars: int = 240) -> str:
-    text = sanitize_text(text)
-    if len(text) <= max_chars:
-        return text
-    # corta por palavra
-    return textwrap.shorten(text, width=max_chars, placeholder="…")
 
-def pick_image(item: dict) -> str:
-    """Tenta extrair uma imagem do item Newsdata."""
-    for key in ("image_url", "image", "image_link", "thumbnail"):
-        url = item.get(key)
-        if url and isinstance(url, str) and url.startswith("http"):
-            return url
-    return ""
+def choose_image(item: Dict[str, Any]) -> Optional[str]:
+    """
+    Newsdata can return different fields; try a few common ones.
+    """
+    for key in ("image_url", "image", "thumbnail", "image_link"):
+        val = item.get(key)
+        if val and isinstance(val, str) and val.startswith("http"):
+            return val
+    return None
 
-def api_key_or_die() -> str:
-    if not API_KEY:
-        raise RuntimeError("API_KEY não encontrada. Define NEWS_API_KEY (ou NEWSDATA_API_KEY) nas Actions.")
-    return API_KEY
 
-# ==========================
-# API
-# ==========================
-
-def build_query() -> str:
-    # liga termos com OR para cobrir várias variantes
-    return " OR ".join(AI_QUERY_TERMS)
-
-def call_api(params: dict) -> dict:
-    """Chama API e valida erros usuais."""
-    resp = requests.get(API_URL, params=params, timeout=30)
+def call_api(params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Make a single API call; raise on HTTP errors with useful info.
+    """
+    r = requests.get(API_URL, params=params, timeout=20)
     try:
-        data = resp.json()
-    except Exception:
-        resp.raise_for_status()
-        # se chegou aqui, não é JSON
-        raise
-
-    # Newsdata por vezes devolve {"status":"error", "results":{"message": ...}}
-    # ou HTTP 422 para filtros não suportados.
-    if resp.status_code != 200 or data.get("status") != "success":
-        # Mostrar URL para facilitar debug
-        log(f"⚠️ API error ({resp.status_code}): {json.dumps(data) if isinstance(data, dict) else data}")
-        log(f"URL: {resp.url}")
-        resp.raise_for_status()
-
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        log(f"❌ API error: {r.text}")
+        raise e
+    data = r.json()
+    # Newsdata may return {'status':'error', 'results': {'message': '...'}}
+    if isinstance(data, dict) and data.get("status") == "error":
+        log(f"⚠️ API error (422): {json.dumps(data)}")
+        raise requests.HTTPError(data)
     return data
 
-def fetch_latest(max_items: int = MAX_POSTS) -> list[dict]:
-    """
-    Vai buscar artigos usando paginação por nextPage.
-    Só aceita artigos que passem os filtros de qualidade.
-    """
-    api_key_or_die()
-    query = build_query()
 
-    params = {
-        "apikey": API_KEY,
-        "q": query,
-        "language": "en",
-        "category": "technology",
-        # A Newsdata usa paginação por nextPage (token). Não passar "page"!
-        # Podemos também pedir data recente filtrando 'from_date' se necessário.
-        # "from_date": today_ymd(),  # opcional – alguns planos não suportam este filtro
+def build_queries() -> List[str]:
+    """
+    Return short queries to avoid 'Query length cannot be greater than 100'.
+    We search each term separately and then merge results.
+    """
+    return AI_QUERY_TERMS[:]  # copy
+
+
+def take_first_sentence(text: str, limit: int = 220) -> str:
+    if not text:
+        return ""
+    # try to cut on sentence end, otherwise trim
+    parts = re.split(r"(?<=[.!?])\s+", text)
+    if parts:
+        s = parts[0]
+        if len(s) < limit:
+            return s
+    return text[:limit].rstrip() + "…"
+
+
+def md_front_matter(meta: Dict[str, Any]) -> str:
+    """
+    Assemble YAML front matter safely (no f-string replacements for quotes).
+    """
+    lines = ["---"]
+    for k in ("layout", "title", "date", "excerpt", "image", "source", "link"):
+        v = meta.get(k)
+        if v is None or v == "":
+            continue
+        if isinstance(v, str):
+            # escape quotes for YAML safety
+            v = v.replace('"', '\\"')
+            lines.append(f'{k}: "{v}"')
+        else:
+            lines.append(f"{k}: {v}")
+    lines.append("---")
+    return "\n".join(lines)
+
+
+def write_post(item: Dict[str, Any]) -> Optional[str]:
+    """
+    Create a Jekyll Markdown file for one news item.
+    Returns the file path or None if skipped.
+    """
+    title = sanitize_text(item.get("title"))
+    desc = sanitize_text(item.get("description"))
+    content = sanitize_text(item.get("content")) or desc
+    if not good_quality(title, desc, content):
+        return None
+
+    date_str = utc_date_str()
+    slug = slugify(title)[:80] or "ai-news"
+    filename = f"{POSTS_DIR}/{date_str}-{slug}.md"
+
+    if os.path.exists(filename):
+        # avoid duplicates (same day + same title)
+        return None
+
+    # Basic excerpt (first sentence or trims)
+    excerpt = take_first_sentence(desc or content, 220)
+
+    meta = {
+        "layout": "post",
+        "title": title,
+        "date": date_str,
+        "excerpt": excerpt,
+        "image": choose_image(item) or "",
+        "source": sanitize_text(item.get("source_id") or item.get("source") or ""),
+        "link": sanitize_text(item.get("link") or item.get("url") or ""),
     }
 
-    accepted: list[dict] = []
-    next_page = None
-    tries = 0
+    fm = md_front_matter(meta)
+    body_lines = []
 
-    while len(accepted) < max_items and tries < 8:  # limite de segurança
-        if next_page:
-            params["page"] = next_page  # apesar da doc, a resposta devolve 'nextPage' e aceita como 'page'
-        else:
-            # garantir que não fica 'page' pendurado entre ciclos
-            params.pop("page", None)
+    # If we have longer content, show a compact version
+    if content and content.lower() != meta["excerpt"].lower():
+        body_lines.append(content)
 
-        data = call_api(params)
+    body_lines.append("")
+    body_lines.append(f"Source: [{meta['source']}]({meta['link']})" if meta.get("source") else f"[Read more]({meta.get('link','')})")
 
-        results = data.get("results") or []
-        if not isinstance(results, list) or not results:
+    md = fm + "\n\n" + "\n".join(body_lines).strip() + "\n"
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(md)
+
+    return filename
+
+
+# ========================
+# Main fetching routine
+# ========================
+
+def fetch_latest(max_items: int = MAX_POSTS) -> List[Dict[str, Any]]:
+    """
+    Loop over short queries and merge the best items until we have max_items.
+    """
+    api_key_or_die()
+    queries = build_queries()
+
+    accepted: List[Dict[str, Any]] = []
+    seen_links = set()
+
+    log("📰 Fetching latest AI articles...")
+
+    for q in queries:
+        if len(accepted) >= max_items:
             break
 
+        params = {
+            "apikey": API_KEY,
+            "q": q,
+            "language": "en",
+            "category": "technology",
+        }
+
+        try:
+            data = call_api(params)
+        except Exception as e:
+            log(f"⚠️ Skipping query '{q}': {e}")
+            continue
+
+        results = data.get("results") or []
         for it in results:
             if len(accepted) >= max_items:
                 break
 
-            title = sanitize_text(it.get("title", ""))
-            desc = sanitize_text(it.get("description", ""))
-            content = sanitize_text(it.get("content", "")) or desc
+            link = sanitize_text(it.get("link") or it.get("url") or "")
+            if link in seen_links:
+                continue
+
+            title = sanitize_text(it.get("title"))
+            desc = sanitize_text(it.get("description"))
+            content = sanitize_text(it.get("content")) or desc
 
             if not good_quality(title, desc, content):
                 continue
 
             accepted.append(it)
+            seen_links.add(link)
 
-        # paginação
-        next_page = data.get("nextPage")
-        tries += 1
-        if not next_page:
-            break
-
-        # respeitar a API
+        # Small delay to be nice with the API
         time.sleep(0.4)
 
     return accepted[:max_items]
 
-# ==========================
-# Escrita do post
-# ==========================
-
-def build_markdown(item: dict) -> str:
-    """Gera o conteúdo Markdown com front-matter."""
-    title = sanitize_text(item.get("title", ""))
-    desc = sanitize_text(item.get("description", ""))
-    content = sanitize_text(item.get("content", "")) or desc
-
-    # fallback: pequeno 'mini-resumo' se o content for curto
-    if len(content) < MIN_CONTENT_CHARS:
-        # criar um parágrafo a partir da desc + título
-        base = desc if len(desc) >= 80 else (title + ". " + desc)
-        content = clamp_excerpt(base, 900)
-
-    image_url = pick_image(item)
-    source_id = item.get("source_id") or item.get("source") or ""
-    link = item.get("link") or item.get("url") or ""
-    the_date = dt.datetime.utcnow().date().isoformat()
-
-    # Sanitizar strings para YAML
-    safe_title = title.replace('"', '\\"')
-    safe_excerpt = clamp_excerpt(desc or content, 240).replace('"', '\\"')
-
-    fm_lines = [
-        "---",
-        'layout: post',
-        f'title: "{safe_title}"',
-        f'date: {the_date}',
-        'tags: [ai, news]',
-    ]
-    if image_url:
-        fm_lines.append(f'image: "{image_url}"')
-    if source_id:
-        fm_lines.append(f'source: "{source_id}"')
-    if link:
-        fm_lines.append(f'link: "{link}"')
-    fm_lines.append(f'excerpt: "{safe_excerpt}"')
-    fm_lines.append("---")
-
-    body_lines = []
-
-    if image_url:
-        # Mostra a imagem dentro do corpo também (o layout já a pode usar via front-matter)
-        body_lines.append(f'![{safe_title}]({image_url})\n')
-
-    body_lines.append(content)
-    if link:
-        body_lines.append(f'\n\n_Read more at: [{source_id or "source"}]({link})_')
-
-    return "\n".join(fm_lines) + "\n\n" + "\n".join(body_lines).strip() + "\n"
-
-def save_item(item: dict) -> str:
-    """Guarda um item como ficheiro em _posts/."""
-    title = sanitize_text(item.get("title", "untitled"))
-    slug = slugify(title)[:70] or "post"
-    date_prefix = today_ymd()
-    filename = POSTS_DIR / f"{date_prefix}-{slug}.md"
-
-    # Evitar sobrescrever se já existe (por ex. se o slug repetiu)
-    idx = 2
-    while filename.exists():
-        filename = POSTS_DIR / f"{date_prefix}-{slug}-{idx}.md"
-        idx += 1
-
-    md = build_markdown(item)
-    filename.write_text(md, encoding="utf-8")
-    return str(filename)
-
-# ==========================
-# Main
-# ==========================
 
 def main() -> None:
-    log("🧠 Running update_posts.py...")
-    api_key_or_die()
+    try:
+        items = fetch_latest(MAX_POSTS)
+        if not items:
+            log("ℹ️ No qualifying items found.")
+            return
 
-    log("📰 Fetching latest AI articles...")
-    items = fetch_latest(MAX_POSTS)
+        created = 0
+        for it in items:
+            path = write_post(it)
+            if path:
+                created += 1
+                log(f"✅ Post criado: {path}")
 
-    if not items:
-        log("ℹ️ No acceptable articles found. Nothing to do.")
-        return
+        if created == 0:
+            log("ℹ️ Nothing new to write (duplicates/filtered).")
 
-    created = []
-    for it in items:
-        try:
-            path = save_item(it)
-            created.append(path)
-            log(f"✅ Created: {path}")
-        except Exception as e:
-            log(f"❌ Failed to save post: {e}")
+    except Exception as e:
+        log(f"❌ Falha: {e}")
+        raise SystemExit(1)
 
-    if created:
-        log(f"🎉 Done. {len(created)} post(s) created.")
-    else:
-        log("ℹ️ No files created after filtering.")
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        log(f"❌ Fatal error: {e}")
-        sys.exit(1)
+    main()
