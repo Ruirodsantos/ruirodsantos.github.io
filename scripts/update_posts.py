@@ -1,6 +1,4 @@
 import os
-import re
-import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -11,29 +9,21 @@ from slugify import slugify
 POSTS_DIR = Path("_posts")
 POSTS_DIR.mkdir(parents=True, exist_ok=True)
 
-DAILY_TARGET = 5  # how many posts to create per run
+DAILY_TARGET = 5  # how many posts per run
 KEYWORDS = ["artificial intelligence", "machine learning", "AI", "AGI"]
 
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY")  # <-- uses your repo variable
+API_KEY = os.getenv("NEWS_API_KEY")
 
 if not API_KEY:
     raise ValueError("API_KEY not found. Set NEWS_API_KEY in repo Variables.")
 
-# Accept articles from last 24h (UTC)
 NOW = datetime.now(timezone.utc)
 CUTOFF = NOW - timedelta(days=1)
 
-def parse_dt(any_date: str) -> datetime | None:
-    """
-    Try to parse common date fields from Newsdata and other feeds.
-    Returns a timezone-aware UTC datetime or None.
-    """
+def parse_dt(any_date: str):
     if not any_date:
         return None
-    txt = any_date.strip()
-
-    # Common formats seen in news APIs
     fmts = [
         "%Y-%m-%dT%H:%M:%S%z",
         "%Y-%m-%dT%H:%M:%SZ",
@@ -43,8 +33,7 @@ def parse_dt(any_date: str) -> datetime | None:
     ]
     for f in fmts:
         try:
-            dt = datetime.strptime(txt, f)
-            # assume UTC if naive
+            dt = datetime.strptime(any_date, f)
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt.astimezone(timezone.utc)
@@ -60,37 +49,33 @@ def safe_get(d: dict, *keys, default=None):
     return default
 
 def fetch_batch():
-    """
-    Fetch a batch from Newsdata (we’ll filter to last 24h & up to DAILY_TARGET).
-    """
     query = " OR ".join(KEYWORDS)
     params = {
         "apikey": API_KEY,
         "q": query,
         "language": "en",
         "category": "technology",
-        # You can add country or date filters if you want stricter results
-        # "from_date": CUTOFF.strftime("%Y-%m-%d"),
     }
     r = requests.get(API_URL, params=params, timeout=30)
     r.raise_for_status()
     data = r.json()
-
-    results = data.get("results", []) or []
-    return results
+    return data.get("results", []) or []
 
 def build_filename(dt: datetime, title: str) -> Path:
     slug = slugify(title)[:80]
     return POSTS_DIR / f"{dt.strftime('%Y-%m-%d')}-{slug}.md"
 
+def sanitize(text: str) -> str:
+    return text.replace('"', "'").replace("\n", " ").strip()
+
 def make_front_matter(article: dict, dt: datetime, title: str, link: str, source: str, image: str, excerpt: str) -> str:
     yml = [
         "---",
         "layout: post",
-        f'title: "{title.replace(\'"\', "\\\"")}"',
+        f'title: "{sanitize(title)}"',
         f"date: {dt.strftime('%Y-%m-%d')}",
-        f'image: "{image}"' if image else "image:",
-        f'excerpt: "{excerpt.replace(\'"\', "\\\"")}"' if excerpt else "excerpt:",
+        f'image: "{sanitize(image)}"' if image else "image:",
+        f'excerpt: "{sanitize(excerpt)}"' if excerpt else "excerpt:",
         "categories: [ai, news]",
         "---",
         "",
@@ -99,8 +84,7 @@ def make_front_matter(article: dict, dt: datetime, title: str, link: str, source
     ]
     return "\n".join(yml).strip() + "\n"
 
-def create_post(article: dict) -> Path | None:
-    # Pull fields robustly
+def create_post(article: dict):
     title = safe_get(article, "title", "name")
     if not title:
         return None
@@ -108,27 +92,19 @@ def create_post(article: dict) -> Path | None:
     link = safe_get(article, "link", "url")
     source = safe_get(article, "source_id", "source", "creator", default="Source")
 
-    # Newsdata uses `pubDate`; support others too
     pub_txt = safe_get(article, "pubDate", "published_at", "published", "date")
     dt = parse_dt(pub_txt) or NOW
-
-    # Only last 24h
     if dt < CUTOFF:
         return None
 
-    # Image candidates
     image = safe_get(article, "image_url", "image", "urlToImage", "image_link", default="")
-
-    # Body/excerpt
     content = safe_get(article, "content", "full_description", default="") or ""
     description = safe_get(article, "description", "summary", default="") or ""
     excerpt = (description or content)[:240].strip()
 
-    # Skip very low-value one-liners
     if len((description + content).strip()) < 120:
         return None
 
-    # Skip if file exists (dedupe)
     fn = build_filename(dt, title)
     if fn.exists():
         return None
@@ -136,8 +112,7 @@ def create_post(article: dict) -> Path | None:
     md = make_front_matter(article, dt, title, link or "", str(source), image or "", excerpt)
     with open(fn, "w", encoding="utf-8") as f:
         f.write(md)
-        # Add a small body (the excerpt + link). You can enrich this later.
-        f.write((content or description) + "\n")
+        f.write("\n" + (content or description) + "\n")
 
     return fn
 
@@ -154,7 +129,7 @@ def main():
             print(f"✅ Created: {fn}")
 
     if created == 0:
-        print("ℹ️ No new posts created (no fresh, multi-sentence items found).")
+        print("ℹ️ No new posts created.")
     else:
         print(f"🎉 Done. Created {created} post(s).")
 
