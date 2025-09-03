@@ -2,316 +2,321 @@
 # -*- coding: utf-8 -*-
 
 """
-Update posts from Newsdata.io with enrichment from the original article.
+Update AI blog posts from Newsdata API.
+- Fetches up to MAX_POSTS fresh tech/AI articles
+- Applies quality filters
+- Adds fallback image if missing
+- Writes enriched .md posts into _posts/
 
-What it does:
-- Fetches recent AI news (short query to avoid API query-length issues).
-- For each item, downloads the source URL and extracts main text with trafilatura.
-- Builds a 150–300 word summary: intro + key points + why-it-matters + link.
-- Filters out thin/irrelevant content (sports, paywall notices, duplicates).
-- Writes Jekyll posts into _posts/YYYY-MM-DD-slug.md
+Env vars:
+  NEWSDATA_API_KEY  (preferido)  ou  NEWS_API_KEY (alternativa)
 
-Requirements:
-  pip install requests python-slugify trafilatura
-
-Environment:
-  NEWS_API_KEY (preferred) or NEWSDATA_API_KEY
+Requisitos:
+  pip install requests python-slugify
 """
+
+from __future__ import annotations
 
 import os
 import re
+import sys
 import json
+import textwrap
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 import requests
 from slugify import slugify
-import trafilatura
 
-
-# --------------------
-# Config
-# --------------------
+# ---------- Configuração ----------
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY") or os.getenv("NEWSDATA_API_KEY")
+API_KEY = os.getenv("NEWSDATA_API_KEY") or os.getenv("NEWS_API_KEY")
 
-QUERY = '("artificial intelligence" OR AI OR "machine learning")'
+# Palavras-chave (mantidas curtas para não exceder limite de query)
+KEYWORDS = [
+    'ai', 'artificial intelligence', 'machine learning',
+    'openai', 'anthropic', 'meta ai', 'google ai'
+]
 LANG = "en"
 CATEGORY = "technology"
+COUNTRY = None           # 'us' ou None – Newsdata às vezes filtra demais por país
+MAX_POSTS = 5            # quantos posts criar por execução
+POSTS_DIR = "_posts"
+FALLBACK_IMAGE = "/assets/ai-hero.jpg"   # deve existir no repositório
+USER_AGENT = "ai-discovery-bot/1.0 (+github actions)"
 
-MAX_POSTS = 5
-POSTS_DIR = Path("_posts")
-POSTS_DIR.mkdir(exist_ok=True)
+# ---------- Utilidades ----------
 
-EXCLUDE_KEYWORDS = {
-    "bundesliga", "premier league", "rangers", "celtic", "guardiola",
-    "brighton", "manchester city", "derbies", "broadcasts",
-    "football", "soccer",
-    "ONLY AVAILABLE IN PAID PLANS".lower(),
-    "Only available in paid plans".lower(),
-}
+def debug(msg: str) -> None:
+    print(msg, flush=True)
 
-MIN_SUMMARY_WORDS = 140     # target ~150–300 words
-MAX_EXCERPT_LEN = 220
+def safe_get(d: Dict[str, Any], *keys: str) -> Optional[str]:
+    cur = d
+    for k in keys:
+        if not isinstance(cur, dict) or k not in cur:
+            return None
+        cur = cur[k]
+    return str(cur) if cur is not None else None
 
-PLACEHOLDER_IMAGE = None    # e.g. "/assets/og-default.jpg" if you want one
-
-
-# --------------------
-# Helpers
-# --------------------
 def clean_text(s: Optional[str]) -> str:
     if not s:
         return ""
-    s = s.replace("\u00a0", " ").replace("\u200b", "")
+    # remove múltiplos espaços/newlines, e caracteres estranhos
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
-def looks_irrelevant(text: str) -> bool:
-    t = text.lower()
-    if any(k in t for k in EXCLUDE_KEYWORDS):
-        return True
-    # must plausibly be about AI
-    if not re.search(r"\b(ai|artificial intelligence|machine learning|genai|generative ai)\b", t):
-        return True
-    return False
+def too_similar(a: str, b: str) -> bool:
+    a = clean_text(a).lower()
+    b = clean_text(b).lower()
+    return a == b or (a and b and (a in b or b in a))
 
-def fetch_html_main_text(url: str) -> str:
+def has_low_value_markers(t: str) -> bool:
+    t_low = t.lower()
+    markers = [
+        "only available in paid plans",
+        "subscribe to read",
+        "sign in to continue",
+        "under construction",
+    ]
+    return any(m in t_low for m in markers)
+
+def ensure_dir(path: str) -> None:
+    if not os.path.isdir(path):
+        os.makedirs(path, exist_ok=True)
+
+def pick_image(article: Dict[str, Any]) -> str:
     """
-    Downloads and extracts the main article text using trafilatura.
-    Returns empty string if not possible.
+    Tenta apanhar uma imagem credível do item da API.
+    Cai em FALLBACK_IMAGE se nada existir.
     """
-    if not url or not url.startswith("http"):
-        return ""
-    try:
-        downloaded = trafilatura.fetch_url(url, no_ssl=True, timeout=20)
-        if not downloaded:
-            return ""
-        text = trafilatura.extract(downloaded, include_comments=False, include_tables=False) or ""
-        return clean_text(text)
-    except Exception:
-        return ""
+    candidates = [
+        safe_get(article, "image_url"),
+        safe_get(article, "image"),           # outros esquemas
+        safe_get(article, "source_icon"),
+        safe_get(article, "source", "icon")
+    ]
+    for url in candidates:
+        if url and isinstance(url, str) and url.startswith(("http://", "https://")):
+            return url
+    return FALLBACK_IMAGE
 
-def bulletize_from_text(text: str, limit: int = 6) -> List[str]:
-    """
-    Make 4–6 readable bullets from the extracted text.
-    Simple heuristic: pick medium-length sentences that look informative.
-    """
-    if not text:
-        return []
-    # split into sentences (lightweight)
-    parts = re.split(r"(?<=[.!?])\s+", text)
-    # filter mid-length sentences
-    candidates = [p.strip() for p in parts if 60 <= len(p.strip()) <= 220]
-    # dedupe & cap
-    seen = set()
-    bullets = []
-    for c in candidates:
-        k = c.lower()
-        if k in seen:
-            continue
-        seen.add(k)
-        bullets.append(c)
-        if len(bullets) >= limit:
-            break
-    # if too few, fall back to slightly shorter sentences
-    if len(bullets) < 4:
-        more = [p.strip() for p in parts if 40 <= len(p.strip()) <= 240 and p.strip() not in bullets]
-        for m in more:
-            if len(bullets) >= limit:
-                break
-            bullets.append(m)
-    # clip overly long bullets
-    clipped = []
-    for b in bullets[:limit]:
-        if len(b) > 200:
-            b = b[:197].rstrip() + "..."
-        clipped.append(b)
-    return clipped[:limit]
+def shorten(s: str, max_len: int = 280) -> str:
+    s = clean_text(s)
+    if len(s) <= max_len:
+        return s
+    return s[: max_len - 1].rstrip() + "…"
 
-def pick_image(article: Dict[str, Any]) -> Optional[str]:
-    for key in ("image_url", "image", "thumbnail"):
-        u = clean_text(article.get(key))
-        if u and u.startswith("http"):
-            return u
-    return PLACEHOLDER_IMAGE
+def build_query() -> str:
+    # Junta as keywords com OR e corta se estourar 100 chars
+    parts = [f'"{kw}"' if " " in kw else kw for kw in KEYWORDS]
+    query = " OR ".join(parts)
+    if len(query) > 95:
+        query = '"artificial intelligence" OR ai OR "machine learning"'
+    return query
 
-def build_summary(title: str, source_name: str, link: str, body_text: str, description: str) -> str:
-    """
-    Compose a 150–300 word summary:
-      - Intro (what happened)
-      - Key points (bullets)
-      - Why it matters (context)
-      - Read more (link)
-    """
-    t = clean_text(title)
-    d = clean_text(description)
-    bt = clean_text(body_text)
-
-    # intro: prefer description; fallback to snip of body
-    intro = d if len(d.split()) >= 25 else (bt[:300] + "...") if len(bt) > 340 else d or t
-
-    # bullets from body text
-    bullets = bulletize_from_text(bt, limit=6)
-    bullet_block = ""
-    if bullets:
-        bullet_block = "\n\n**Key points:**\n" + "\n".join(f"- {b}" for b in bullets[:6])
-
-    # why it matters (short generic context)
-    context = (
-        "This update reflects the ongoing pace of AI adoption across products and research. "
-        "Expect continued iteration around model efficiency, safety, and practical integrations."
-    )
-
-    read_more = f"\n\n[Read more at {source_name or 'source'}]({link})" if link else ""
-
-    full = f"{intro}{bullet_block}\n\n**Why it matters:** {context}{read_more}"
-    # ensure we hit a decent length
-    if len(full.split()) < MIN_SUMMARY_WORDS and bt:
-        extra = " " + " ".join(bt.split()[:120]) + "..."
-        full += "\n\n" + extra
-
-    # tidy
-    full = re.sub(r"\n{3,}", "\n\n", full).strip()
-    return full
-
-def normalize_date(article: Dict[str, Any]) -> str:
-    date_str = article.get("pubDate") or article.get("published_at") or ""
-    dt = None
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S%z", "%Y-%m-%d",
-                "%a, %d %b %Y %H:%M:%S %Z"):
-        try:
-            dt = datetime.strptime(date_str, fmt)
-            break
-        except Exception:
-            continue
-    if not dt:
-        dt = datetime.now(timezone.utc)
-    return dt.strftime("%Y-%m-%d")
-
-def short_excerpt(text: str) -> str:
-    txt = clean_text(text)
-    if len(txt) > MAX_EXCERPT_LEN:
-        txt = txt[:MAX_EXCERPT_LEN].rsplit(" ", 1)[0] + "..."
-    return txt
-
-def write_post(article: Dict[str, Any], summary: str) -> Optional[str]:
-    title = clean_text(article.get("title"))
-    if not title:
-        return None
-
-    date_for_name = normalize_date(article)
-    slug = slugify(title)[:80] or "ai-news"
-    filename = POSTS_DIR / f"{date_for_name}-{slug}.md"
-    if filename.exists():
-        return None
-
-    image = pick_image(article)
-    link = clean_text(article.get("link") or article.get("url") or "")
-    source_name = clean_text(article.get("source_id") or article.get("source") or "")
-
-    fm = {
-        "layout": "post",
-        "title": title.replace('"', '\\"'),
-        "date": date_for_name,
-        "categories": ["ai", "news"],
-    }
-    if image:
-        fm["image"] = image
-
-    # excerpt from description or summary
-    excerpt_src = clean_text(article.get("description")) or summary
-    fm["excerpt"] = short_excerpt(excerpt_src).replace('"', '\\"')
-
-    # Build final markdown
-    fm_yaml = ["---"]
-    for k, v in fm.items():
-        if isinstance(v, list):
-            fm_yaml.append(f'{k}: [{", ".join(v)}]')
-        else:
-            fm_yaml.append(f'{k}: "{v}"')
-    fm_yaml.append("---\n")
-
-    src_block = ""
-    if source_name or link:
-        if link:
-            label = source_name if source_name else "source"
-            src_block = f"\n\nSource: [{label}]({link})"
-        else:
-            src_block = f"\n\nSource: {source_name}"
-
-    md = "".join(line + "\n" for line in fm_yaml) + summary + src_block + "\n"
-    filename.write_text(md, encoding="utf-8")
-    print(f"✅ Created: {filename}")
-    return str(filename)
-
-def call_api(page: int = 1) -> Dict[str, Any]:
-    params = {
+def call_api(page: Optional[int] = None) -> Dict[str, Any]:
+    params: Dict[str, Any] = {
         "apikey": API_KEY,
-        "q": QUERY,
+        "q": build_query(),
         "language": LANG,
         "category": CATEGORY,
-        "page": page
     }
-    r = requests.get(API_URL, params=params, timeout=25)
+    if COUNTRY:
+        params["country"] = COUNTRY
+    if page:
+        params["page"] = page
+
+    headers = {"User-Agent": USER_AGENT}
+    r = requests.get(API_URL, params=params, headers=headers, timeout=20)
+    # Levanta HTTPError se 4xx/5xx
     r.raise_for_status()
     return r.json()
 
 def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
+    """
+    Vai buscar artigos até 'limit' utilizando paginação simples.
+    Aplica filtros mínimos de qualidade.
+    """
     if not API_KEY:
-        raise ValueError("NEWS_API_KEY (or NEWSDATA_API_KEY) not set.")
-    items: List[Dict[str, Any]] = []
+        raise ValueError("NEWS_API_KEY (ou NEWSDATA_API_KEY) not set.")
+
+    debug("🧠 update_posts.py starting…")
+    debug("📰 Fetching latest AI articles...")
+
+    collected: List[Dict[str, Any]] = []
     page = 1
-    while len(items) < limit and page <= 3:
-        data = call_api(page)
-        results = data.get("results") or []
-        for art in results:
-            if len(items) >= limit:
+    while len(collected) < limit and page <= 3:
+        try:
+            data = call_api(page=page)
+        except requests.HTTPError as e:
+            # Mostrar URL útil no log
+            debug(f"❌ API HTTP error on page {page}: {e}")
+            break
+        except Exception as e:
+            debug(f"❌ API error on page {page}: {e}")
+            break
+
+        results = data.get("results") or data.get("articles") or []
+        if not results:
+            break
+
+        for item in results:
+            if len(collected) >= limit:
                 break
-            title = clean_text(art.get("title"))
-            description = clean_text(art.get("description"))
-            content = clean_text(art.get("content"))
-            combined = f"{title}. {description}. {content}"
-            if not title or looks_irrelevant(combined):
+
+            title = clean_text(safe_get(item, "title"))
+            desc = clean_text(safe_get(item, "description"))
+            content = clean_text(safe_get(item, "content"))
+            link = clean_text(safe_get(item, "link")) or clean_text(safe_get(item, "url"))
+            source_id = clean_text(safe_get(item, "source_id")) or clean_text(safe_get(item, "source"))
+
+            # filtros de base
+            if not title or not link:
                 continue
-            items.append(art)
+            if has_low_value_markers(desc) or has_low_value_markers(content) or has_low_value_markers(title):
+                continue
+            if too_similar(title, desc) and len(desc) < 60:
+                # praticamente sem informação
+                continue
+
+            item_norm = {
+                "title": title,
+                "description": desc,
+                "content": content,
+                "link": link,
+                "source_id": source_id or "source",
+                "image": pick_image(item),
+                # published date pode vir em vários campos; se não vier, usa now UTC
+                "pubDate": clean_text(safe_get(item, "pubDate"))
+                           or clean_text(safe_get(item, "published_at"))
+                           or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            }
+            collected.append(item_norm)
+
         page += 1
-    return items[:limit]
 
-def main():
-    print("🧠 update_posts.py starting…")
-    articles = fetch_articles(limit=MAX_POSTS)
-    if not articles:
-        print("ℹ️ No suitable articles found.")
-        return
+    return collected[:limit]
 
-    created = 0
-    for art in articles:
-        title = clean_text(art.get("title"))
-        link = clean_text(art.get("link") or art.get("url") or "")
-        source_name = clean_text(art.get("source_id") or art.get("source") or "")
+def enrich_text(title: str, desc: str, content: str, source: str, link: str) -> str:
+    """
+    Gera um conteúdo ampliado (sem usar serviços externos), baseado em título/descrição/conteúdo.
+    É melhor do que uma linha só, e ajuda a aprovação do AdSense.
+    """
+    # base
+    base = clean_text(content) or clean_text(desc)
+    base = shorten(base, 700)
 
-        # fetch original content
-        body_text = fetch_html_main_text(link)
-        # build rich summary
-        summary = build_summary(title, source_name, link, body_text, art.get("description") or "")
+    # “Porque interessa” – heurístico simples
+    why = []
+    title_low = title.lower()
+    if any(k in title_low for k in ["stock", "earnings", "valuation", "market"]):
+        why.append("Impacto nos mercados e na avaliação de empresas.")
+    if any(k in title_low for k in ["policy", "regulation", "law", "ban"]):
+        why.append("Mudanças regulatórias podem redefinir o panorama competitivo.")
+    if any(k in title_low for k in ["chip", "gpu", "hardware", "inference"]):
+        why.append("Infraestrutura de hardware influencia performance e custo de IA.")
+    if any(k in title_low for k in ["research", "paper", "breakthrough", "study"]):
+        why.append("Avanços de investigação podem abrir novos casos de uso.")
+    if not why:
+        why.append("Relevante para o ecossistema de IA e seus casos de uso.")
 
-        # minimal final quality check
-        if len(summary.split()) < MIN_SUMMARY_WORDS:
-            # fallback: append more from body_text
-            extra = " " + " ".join(body_text.split()[:150])
-            summary = (summary + extra).strip()
+    bullets: List[str] = []
+    for part in re.split(r"[.;]\s+", base)[:4]:
+        part = clean_text(part)
+        if part and 25 <= len(part) <= 220:
+            bullets.append(part)
 
-        if write_post(art, summary):
-            created += 1
+    # Montagem
+    pieces = []
 
-    print(f"🎉 Done. Created {created} post(s).")
+    pieces.append("### TL;DR")
+    pieces.append(shorten(base, 240) or "Resumo breve do que foi anunciado/aconteceu no mundo da IA.")
 
+    pieces.append("\n### Por que importa")
+    for w in why:
+        pieces.append(f"- {w}")
+
+    if bullets:
+        pieces.append("\n### Detalhes rápidos")
+        for b in bullets:
+            pieces.append(f"- {b}")
+
+    pieces.append("\n> Fonte: ")
+    pieces.append(f"[{source}]({link})")
+
+    return "\n".join(pieces).strip()
+
+def build_markdown(article: Dict[str, Any]) -> str:
+    title = article["title"]
+    description = article.get("description") or ""
+    body = enrich_text(title, description, article.get("content", ""), article["source_id"], article["link"])
+
+    # front matter
+    fm = {
+        "layout": "post",
+        "title": title.replace('"', '\\"'),
+        "date": datetime.now(timezone.utc).date().isoformat(),
+        "excerpt": shorten(description, 300),
+        "categories": ["ai", "news"],
+        "image": article.get("image") or FALLBACK_IMAGE,
+        "source": article.get("source_id") or "source",
+        "source_url": article.get("link"),
+    }
+
+    # YAML manual simples para evitar libs extra
+    fm_lines = ["---"]
+    fm_lines.append(f'layout: {fm["layout"]}')
+    fm_lines.append(f'title: "{fm["title"]}"')
+    fm_lines.append(f'date: {fm["date"]}')
+    fm_lines.append(f'excerpt: "{fm["excerpt"].replace(\'"\', "\\\\\"")}"')
+    fm_lines.append('categories: [ai, news]')
+    fm_lines.append(f'image: "{fm["image"]}"')
+    fm_lines.append(f'source: "{fm["source"]}"')
+    fm_lines.append(f'source_url: "{fm["source_url"]}"')
+    fm_lines.append("---")
+
+    md = "\n".join(fm_lines) + "\n\n" + body + "\n"
+    return md
+
+def make_filename(title: str, date_str: Optional[str] = None) -> str:
+    date_part = (date_str or datetime.now(timezone.utc).date().isoformat())[:10]
+    slug = slugify(title)[:80] or "post"
+    return os.path.join(POSTS_DIR, f"{date_part}-{slug}.md")
+
+def write_post(article: Dict[str, Any]) -> Optional[str]:
+    ensure_dir(POSTS_DIR)
+    path = make_filename(article["title"], article.get("pubDate"))
+    if os.path.exists(path):
+        debug(f"↩︎ Skipping (already exists): {os.path.basename(path)}")
+        return None
+    content = build_markdown(article)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return path
+
+# ---------- Main ----------
+
+def main() -> None:
+    try:
+        articles = fetch_articles(limit=MAX_POSTS)
+        if not articles:
+            debug("ℹ️ No articles found.")
+            sys.exit(0)
+
+        created = 0
+        for art in articles:
+            path = write_post(art)
+            if path:
+                created += 1
+                debug(f"✅ Post criado: {path}")
+
+        if created == 0:
+            debug("ℹ️ Nothing new to write.")
+        else:
+            debug(f"🎉 Done. {created} post(s) written.")
+    except Exception as e:
+        debug(f"❌ Erro: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        raise
+    main()
