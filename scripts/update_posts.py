@@ -32,17 +32,22 @@ from slugify import slugify
 API_URL = "https://newsdata.io/api/1/news"
 API_KEY = os.getenv("NEWSDATA_API_KEY") or os.getenv("NEWS_API_KEY")
 
-# Palavras-chave (mantidas curtas para não exceder limite de query)
+# Palavras-chave (curtas para não exceder limite de query do NewsData)
 KEYWORDS = [
-    'ai', 'artificial intelligence', 'machine learning',
-    'openai', 'anthropic', 'meta ai', 'google ai'
+    "ai",
+    "artificial intelligence",
+    "machine learning",
+    "openai",
+    "anthropic",
+    "meta ai",
+    "google ai",
 ]
 LANG = "en"
 CATEGORY = "technology"
-COUNTRY = None           # 'us' ou None – Newsdata às vezes filtra demais por país
+COUNTRY = None           # 'us' ou None – às vezes filtra demais por país
 MAX_POSTS = 5            # quantos posts criar por execução
 POSTS_DIR = "_posts"
-FALLBACK_IMAGE = "/assets/ai-hero.jpg"   # deve existir no repositório
+FALLBACK_IMAGE = "/assets/ai-hero.jpg"   # deve existir no repo
 USER_AGENT = "ai-discovery-bot/1.0 (+github actions)"
 
 # ---------- Utilidades ----------
@@ -51,7 +56,7 @@ def debug(msg: str) -> None:
     print(msg, flush=True)
 
 def safe_get(d: Dict[str, Any], *keys: str) -> Optional[str]:
-    cur = d
+    cur: Any = d
     for k in keys:
         if not isinstance(cur, dict) or k not in cur:
             return None
@@ -71,7 +76,7 @@ def too_similar(a: str, b: str) -> bool:
     return a == b or (a and b and (a in b or b in a))
 
 def has_low_value_markers(t: str) -> bool:
-    t_low = t.lower()
+    t_low = (t or "").lower()
     markers = [
         "only available in paid plans",
         "subscribe to read",
@@ -93,7 +98,7 @@ def pick_image(article: Dict[str, Any]) -> str:
         safe_get(article, "image_url"),
         safe_get(article, "image"),           # outros esquemas
         safe_get(article, "source_icon"),
-        safe_get(article, "source", "icon")
+        safe_get(article, "source", "icon"),
     ]
     for url in candidates:
         if url and isinstance(url, str) and url.startswith(("http://", "https://")):
@@ -107,7 +112,7 @@ def shorten(s: str, max_len: int = 280) -> str:
     return s[: max_len - 1].rstrip() + "…"
 
 def build_query() -> str:
-    # Junta as keywords com OR e corta se estourar 100 chars
+    # Junta as keywords com OR e corta se estourar ~100 chars (limite do NewsData)
     parts = [f'"{kw}"' if " " in kw else kw for kw in KEYWORDS]
     query = " OR ".join(parts)
     if len(query) > 95:
@@ -128,7 +133,6 @@ def call_api(page: Optional[int] = None) -> Dict[str, Any]:
 
     headers = {"User-Agent": USER_AGENT}
     r = requests.get(API_URL, params=params, headers=headers, timeout=20)
-    # Levanta HTTPError se 4xx/5xx
     r.raise_for_status()
     return r.json()
 
@@ -149,7 +153,6 @@ def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
         try:
             data = call_api(page=page)
         except requests.HTTPError as e:
-            # Mostrar URL útil no log
             debug(f"❌ API HTTP error on page {page}: {e}")
             break
         except Exception as e:
@@ -206,9 +209,9 @@ def enrich_text(title: str, desc: str, content: str, source: str, link: str) -> 
     base = clean_text(content) or clean_text(desc)
     base = shorten(base, 700)
 
-    # “Porque interessa” – heurístico simples
-    why = []
-    title_low = title.lower()
+    # “Porque importa” – heurístico simples
+    why: List[str] = []
+    title_low = (title or "").lower()
     if any(k in title_low for k in ["stock", "earnings", "valuation", "market"]):
         why.append("Impacto nos mercados e na avaliação de empresas.")
     if any(k in title_low for k in ["policy", "regulation", "law", "ban"]):
@@ -226,9 +229,7 @@ def enrich_text(title: str, desc: str, content: str, source: str, link: str) -> 
         if part and 25 <= len(part) <= 220:
             bullets.append(part)
 
-    # Montagem
-    pieces = []
-
+    pieces: List[str] = []
     pieces.append("### TL;DR")
     pieces.append(shorten(base, 240) or "Resumo breve do que foi anunciado/aconteceu no mundo da IA.")
 
@@ -246,6 +247,17 @@ def enrich_text(title: str, desc: str, content: str, source: str, link: str) -> 
 
     return "\n".join(pieces).strip()
 
+def yaml_escape(s: str) -> str:
+    """
+    Escapa aspas e backslashes para uso seguro em YAML em linha.
+    (evita erros de f-string com barras invertidas)
+    """
+    if s is None:
+        return ""
+    s = s.replace("\\", "\\\\")
+    s = s.replace('"', '\\"')
+    return s
+
 def build_markdown(article: Dict[str, Any]) -> str:
     title = article["title"]
     description = article.get("description") or ""
@@ -254,28 +266,27 @@ def build_markdown(article: Dict[str, Any]) -> str:
     # front matter
     fm = {
         "layout": "post",
-        "title": title.replace('"', '\\"'),
-        "date": datetime.now(timezone.utc).date().isoformat(),
-        "excerpt": shorten(description, 300),
-        "categories": ["ai", "news"],
+        "title": yaml_escape(title),
+        "date": (article.get("pubDate") or datetime.now(timezone.utc).date().isoformat())[:10],
+        "excerpt": yaml_escape(shorten(description, 300)),
         "image": article.get("image") or FALLBACK_IMAGE,
-        "source": article.get("source_id") or "source",
-        "source_url": article.get("link"),
+        "source": yaml_escape(article.get("source_id") or "source"),
+        "source_url": yaml_escape(article.get("link") or ""),
     }
 
-    # YAML manual simples para evitar libs extra
+    # YAML manual simples
     fm_lines = ["---"]
     fm_lines.append(f'layout: {fm["layout"]}')
     fm_lines.append(f'title: "{fm["title"]}"')
     fm_lines.append(f'date: {fm["date"]}')
-    fm_lines.append(f'excerpt: "{fm["excerpt"].replace(\'"\', "\\\\\"")}"')
+    fm_lines.append(f'excerpt: "{fm["excerpt"]}"')
     fm_lines.append('categories: [ai, news]')
     fm_lines.append(f'image: "{fm["image"]}"')
     fm_lines.append(f'source: "{fm["source"]}"')
     fm_lines.append(f'source_url: "{fm["source_url"]}"')
     fm_lines.append("---")
 
-    md = "\n".join(fm_lines) + "\n\n" + body + "\n"
+    md = "\n".join(fm_lines) + "\n\n" + body.strip() + "\n"
     return md
 
 def make_filename(title: str, date_str: Optional[str] = None) -> str:
