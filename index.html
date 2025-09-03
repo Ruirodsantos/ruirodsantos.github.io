@@ -3,7 +3,6 @@ layout: default
 title: AI Discovery Blog
 ---
 
-<!-- HERO -->
 <section style="max-width: 980px; margin: 0 auto; padding: 2rem 1rem;">
   <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.2rem; align-items: center;">
     <div>
@@ -18,23 +17,19 @@ title: AI Discovery Blog
       </p>
     </div>
     <div>
-      <img src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?auto=format&fit=crop&w=1200&q=80" 
-           alt="Artificial Intelligence concept" 
-           style="width:100%; border-radius:12px; display:block;">
+      <img src="{{ '/assets/ai-hero.jpg' | relative_url }}" alt="AI Discovery" style="width:100%; border-radius:12px; display:block;">
     </div>
   </div>
 </section>
 
-<!-- POSTS LIST -->
 <section style="max-width: 980px; margin: 0 auto; padding: 0 1rem 2rem;">
   <ul class="post-list">
     {% for post in site.posts %}
       <li class="post-item">
-        {% if post.image %}
-          <a href="{{ post.url | relative_url }}">
-            <img class="post-thumbnail" src="{{ post.image }}" alt="{{ post.title }}">
-          </a>
-        {% endif %}
+        {% assign thumb = post.image | default: '/assets/og-default.jpg' | relative_url %}
+        <a href="{{ post.url | relative_url }}">
+          <img class="post-thumbnail" src="{{ thumb }}" alt="{{ post.title }}">
+        </a>
 
         <h2 style="margin: 0.2rem 0 0.2rem;">
           <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
