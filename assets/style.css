@@ -107,3 +107,41 @@ a:hover {
   color: #777;
   margin-top: 2rem;
 }
+/* Footer layout */
+.footer-inner {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.social-icons {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: #1f1f1f;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.social-icon:hover { filter: brightness(1.1); }
+
+.social-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: #ffd54f; /* amarelo moeda */
+}
+
+.social-icon.earnapp { background: #2b2b2b; }
