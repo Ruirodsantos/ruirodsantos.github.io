@@ -1,35 +1,38 @@
 name: Auto Update Blog
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   schedule:
-    - cron: '0 6 * * *' # Todos os dias às 6h UTC (10h Dubai)
+    - cron: "15 7 * * *"   # every day 07:15 UTC (adjust if you want)
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      NEWS_API_KEY: ${{ vars.NEWS_API_KEY }}  # gets your repo Variable
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.x"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt || pip install requests python-slugify
 
       - name: Run blog update script
-        run: python scripts/update_posts.py
-        env:
-          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+        run: |
+          echo "🧠 Running update_posts.py..."
+          python scripts/update_posts.py
 
       - name: Commit and push changes
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add _posts
-          git commit -m "🤖 Auto-update blog post"
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add _posts/*.md || true
+          git commit -m "🤖 Daily auto-add (up to 5 fresh AI news)" || echo "No changes to commit"
           git push
