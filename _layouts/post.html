@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>{{ page.title }}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}" />
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -18,6 +17,7 @@
   </header>
 
   <main class="post-page">
+    <!-- ADS -->
     <ins class="adsbygoogle"
          style="display:block; text-align:center; margin-bottom: 20px;"
          data-ad-client="ca-pub-7715134134171575"
@@ -27,27 +27,32 @@
     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
 
     <article class="post-content">
-      <h2>{{ page.title }}</h2>
-      <p class="post-meta"><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</p>
+      <h1>{{ page.title }}</h1>
+      <div class="post-meta"><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</div>
 
-      {% assign hero = page.image | default: '/assets/og-default.jpg' | relative_url %}
-      <img src="{{ hero }}" alt="{{ page.title }}" class="post-image" loading="lazy" />
+      {% assign has_http = page.image | default:'' %}
+      {% if page.image and has_http contains '://' %}
+        <img class="post-image" src="{{ page.image }}" alt="{{ page.title }}" />
+      {% else %}
+        <img class="post-image" src="{{ (page.image | default:'/assets/ai-hero.svg') | relative_url }}" alt="{{ page.title }}" />
+      {% endif %}
 
       {{ content }}
 
-      <div style="margin-top: 24px;">
-        <strong>Share:</strong>
-        <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}" target="_blank" rel="noopener">X</a> ·
-        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}" target="_blank" rel="noopener">LinkedIn</a>
+      <!-- Partilha -->
+      <div style="margin-top: 20px;">
+        <strong>Share this post:</strong><br>
+        <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}" target="_blank">Share on X</a> |
+        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}" target="_blank">Share on LinkedIn</a>
       </div>
-    </article>
 
-    {% assign related_posts = site.posts | where_exp: "p", "p.url != page.url" | limit:3 %}
-    {% if related_posts.size > 0 %}
+      <!-- Relacionados -->
+      {% assign related = site.posts | where_exp:'p','p.url != page.url' | slice: 0, 3 %}
+      {% if related.size > 0 %}
       <section style="margin-top: 40px;">
-        <h3>Related posts</h3>
+        <h3>Related Posts</h3>
         <ul class="post-list">
-          {% for p in related_posts %}
+          {% for p in related %}
             <li class="post-item">
               <a href="{{ p.url | relative_url }}">{{ p.title }}</a><br>
               <span class="post-meta">{{ p.date | date: "%B %d, %Y" }}</span>
@@ -55,20 +60,19 @@
           {% endfor %}
         </ul>
       </section>
-    {% endif %}
+      {% endif %}
 
-    <p style="margin-top: 28px;"><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
+      <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
+    </article>
   </main>
 
   <footer>
     <div class="footer-inner">
-      <p>© {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved</p>
-      <div class="social-icons">
-        <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
-          EarnApp
-        </a>
-      </div>
+      <span>© {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved</span>
+      <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" role="img" aria-label="coin"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 5v2h3v2h-3v2h3v2h-3v2h-2v-2H8v-2h3v-2H8V9h3V7h2z"/></svg>
+        Earn with me
+      </a>
     </div>
   </footer>
 </body>
