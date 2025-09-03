@@ -63,11 +63,15 @@ a:hover {
   margin-bottom: 2rem;
 }
 
+/* Thumbnails na home */
 .post-thumbnail {
-  max-width: 100%;
+  width: 100%;
   height: auto;
+  max-height: 220px;
+  object-fit: cover;    /* corta para não distorcer */
   border-radius: 8px;
   margin-bottom: 0.5rem;
+  display: block;
 }
 
 /* Meta (unificado) */
@@ -92,8 +96,10 @@ a:hover {
 
 .post-image {
   width: 100%;
-  height: auto;       /* <- adicionada */
-  display: block;     /* <- adicionada */
+  height: auto;
+  max-height: 520px;
+  object-fit: cover;
+  display: block;
   margin: 20px 0;
   border-radius: 8px;
 }
@@ -162,6 +168,7 @@ footer {
 .adsbygoogle {
   margin: 1.25rem 0;
 }
+
 /* ========== Footer layout (desktop) ========== */
 footer {
   background: #111;
@@ -221,4 +228,3 @@ footer {
     text-align: center;
   }
 }
-
