@@ -10,7 +10,7 @@ import requests
 from slugify import slugify
 
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY")  # repo Variable
+API_KEY = os.getenv("NEWS_API_KEY")  # set in repo “Variables”
 MAX_POSTS = 5
 
 POSTS_DIR = Path("_posts")
@@ -36,11 +36,10 @@ def good_enough(text: str, min_chars: int = 140) -> bool:
     return text and len(text.strip()) >= min_chars
 
 def today_utc() -> str:
-    # strictly YYYY-MM-DD (UTC)
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
 
-def fetch_today_articles() -> list[dict]:
-    """Use requests params so query is always well-formed."""
+def fetch_latest() -> list[dict]:
+    """Fetch latest results without date params (free plan safe)."""
     if not API_KEY:
         raise ValueError("API_KEY not found. Define repo variable NEWS_API_KEY.")
     q = " OR ".join(KEYWORDS)
@@ -50,13 +49,11 @@ def fetch_today_articles() -> list[dict]:
         "q": q,
         "language": "en",
         "category": "technology",
-        "from_date": today_utc(),
-        "to_date": today_utc(),
+        # No from_date / to_date to avoid 422 on free plan
         "page": 1,
     }
     resp = requests.get(API_URL, params=params, timeout=30)
-    # For debugging you can uncomment the next line to see the final URL in logs:
-    # print("DEBUG URL:", resp.url)
+    # print("DEBUG URL:", resp.url)  # uncomment for troubleshooting
     resp.raise_for_status()
     data = resp.json()
     return data.get("results") or []
@@ -66,7 +63,6 @@ def build_filename(date_str: str, title: str) -> Path:
     return POSTS_DIR / f"{date_str}-{slug}.md"
 
 def already_exists_by_url(url: str) -> bool:
-    # check for a dedupe tag (sha1 of url) inside any existing post
     tag = hashlib.sha1((url or "").encode("utf-8")).hexdigest()[:12]
     for p in POSTS_DIR.glob("*.md"):
         try:
@@ -108,14 +104,14 @@ def make_post_md(article: dict, date_str: str) -> str:
 
 def main():
     created = 0
-    articles = fetch_today_articles()
-    if not articles:
-        print("ℹ️ No results for today (UTC).")
+    items = fetch_latest()
+    if not items:
+        print("ℹ️ API returned no results.")
         return
 
     today = today_utc()
 
-    for a in articles:
+    for a in items:
         if created >= MAX_POSTS:
             break
 
@@ -127,7 +123,7 @@ def main():
         m = re.match(r"(\d{4}-\d{2}-\d{2})", pub)
         date_str = m.group(1) if m else today
         if date_str != today:
-            continue
+            continue  # keep only today's
 
         content = clean_text(a.get("content") or a.get("description") or "")
         if not good_enough(content):
