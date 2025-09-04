@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>{{ page.title }}</title>
-  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}" />
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575"
+     crossorigin="anonymous"></script>
 </head>
 <body>
   <header>
@@ -12,67 +13,102 @@
     <nav>
       <a href="{{ '/' | relative_url }}">Home</a> |
       <a href="{{ '/about.html' | relative_url }}">About</a> |
-      <a href="{{ '/contact.html' | relative_url }}">Contact</a>
+      <a href="{{ '/contact.html' | relative_url }}">Contact</a> |
+      <a href="{{ '/privacy.html' | relative_url }}">Privacy</a> |
+      <a href="{{ '/feed.xml' | relative_url }}">RSS</a>
     </nav>
   </header>
 
   <main class="post-page">
-    <!-- ADS -->
+    <!-- AdSense block -->
     <ins class="adsbygoogle"
-         style="display:block; text-align:center; margin-bottom: 20px;"
+         style="display:block; text-align:center; margin-bottom:20px;"
          data-ad-client="ca-pub-7715134134171575"
          data-ad-slot="1234567890"
          data-ad-format="auto"
          data-full-width-responsive="true"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
 
-    <article class="post-content">
-      <h1>{{ page.title }}</h1>
-      <div class="post-meta"><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</div>
+    <article>
+      <h2>{{ page.title }}</h2>
+      <p class="post-meta"><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</p>
 
-      {% assign has_http = page.image | default:'' %}
-      {% if page.image and has_http contains '://' %}
-        <img class="post-image" src="{{ page.image }}" alt="{{ page.title }}" />
+      {% comment %}
+      Resolve image:
+      - Use page.image if present, otherwise fallback
+      - Handle absolute vs. relative URLs
+      - Add JS onerror to fallback gracefully
+      {% endcomment %}
+      {% if page.image %}
+        {% assign raw_img = page.image %}
       {% else %}
-        <img class="post-image" src="{{ (page.image | default:'/assets/ai-hero.svg') | relative_url }}" alt="{{ page.title }}" />
+        {% assign raw_img = '/assets/ai-hero.jpg' %}
       {% endif %}
 
-      {{ content }}
+      {% if raw_img contains '://' %}
+        {% assign hero_src = raw_img %}
+      {% else %}
+        {% assign hero_src = raw_img | relative_url %}
+      {% endif %}
 
-      <!-- Partilha -->
-      <div style="margin-top: 20px;">
-        <strong>Share this post:</strong><br>
-        <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}" target="_blank">Share on X</a> |
-        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}" target="_blank">Share on LinkedIn</a>
+      <img class="post-image"
+           src="{{ hero_src }}"
+           alt="{{ page.title | escape }}"
+           loading="lazy"
+           onerror="this.onerror=null;this.src='{{ '/assets/ai-hero.jpg' | relative_url }}';">
+
+      <div class="post-content">
+        {{ content }}
       </div>
 
-      <!-- Relacionados -->
-      {% assign related = site.posts | where_exp:'p','p.url != page.url' | slice: 0, 3 %}
-      {% if related.size > 0 %}
-      <section style="margin-top: 40px;">
+      {% if page.source_url %}
+        <p class="post-source">Source:
+          <a href="{{ page.source_url }}" target="_blank" rel="noopener">
+            {{ page.source }}
+          </a>
+        </p>
+      {% endif %}
+
+      <!-- Share -->
+      <div style="margin-top:20px;">
+        <strong>Share this post:</strong><br>
+        <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}"
+           target="_blank">Share on X</a> |
+        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}"
+           target="_blank">Share on LinkedIn</a>
+      </div>
+    </article>
+
+    <!-- Related posts -->
+    {% assign related = site.posts | where_exp:"p","p.url != page.url" | slice:0,3 %}
+    {% if related.size > 0 %}
+      <section style="margin-top:40px;">
         <h3>Related Posts</h3>
         <ul class="post-list">
-          {% for p in related %}
+          {% for post in related %}
             <li class="post-item">
-              <a href="{{ p.url | relative_url }}">{{ p.title }}</a><br>
-              <span class="post-meta">{{ p.date | date: "%B %d, %Y" }}</span>
+              <a href="{{ post.url | relative_url }}">{{ post.title }}</a><br>
+              <span class="post-meta">{{ post.date | date: "%B %d, %Y" }}</span>
             </li>
           {% endfor %}
         </ul>
       </section>
-      {% endif %}
+    {% endif %}
 
-      <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
-    </article>
+    <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
   </main>
 
   <footer>
     <div class="footer-inner">
-      <span>© {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved</span>
-      <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" role="img" aria-label="coin"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 5v2h3v2h-3v2h3v2h-3v2h-2v-2H8v-2h3v-2H8V9h3V7h2z"/></svg>
-        Earn with me
-      </a>
+      <div class="footer-copy">&copy; {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved</div>
+      <div class="social-icons">
+        <a class="social-icon earnapp" href="https://earnapp.com/i/ruisans" target="_blank" rel="noopener">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1.5a10.5 10.5 0 1 0 0 21 10.5 10.5 0 0 0 0-21zM11 6h2v7h-2V6zm1 12a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
+          Earn with me
+        </a>
+      </div>
     </div>
   </footer>
 </body>
