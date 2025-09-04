@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Update AI blog posts from Newsdata API.
-- Fetches up to MAX_POSTS fresh tech/AI articles
-- Applies quality filters
-- Adds fallback image if missing
-- Writes enriched .md posts into _posts/
+update_posts.py  —  Gera posts Jekyll a partir do Newsdata.io (ou NEWS_API_KEY compatível).
 
-Env vars:
-  NEWSDATA_API_KEY  (preferido)  ou  NEWS_API_KEY (alternativa)
+- Lê a API key de NEWSDATA_API_KEY (preferido) ou NEWS_API_KEY.
+- Busca notícias de IA/tech (query curta < 100 chars).
+- Filtra itens fracos (p.ex. "ONLY AVAILABLE IN PAID PLANS", excerpt == título, etc).
+- Garante uma imagem (da matéria; fallback: /assets/ai-hero.svg).
+- Enriquecimento simples do corpo (TL;DR + porque importa + bullets).
+- Escreve arquivos em _posts/YYYY-MM-DD-slug.md.
 
 Requisitos:
   pip install requests python-slugify
@@ -20,19 +20,18 @@ from __future__ import annotations
 import os
 import re
 import sys
-import json
-import textwrap
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from slugify import slugify
 
-# ---------- Configuração ----------
+# ---------------- Config ----------------
+
 API_URL = "https://newsdata.io/api/1/news"
 API_KEY = os.getenv("NEWSDATA_API_KEY") or os.getenv("NEWS_API_KEY")
 
-# Palavras-chave (curtas para não exceder limite de query do NewsData)
+# Query curta para não estourar o limite de 100 chars do Newsdata
 KEYWORDS = [
     "ai",
     "artificial intelligence",
@@ -42,18 +41,25 @@ KEYWORDS = [
     "meta ai",
     "google ai",
 ]
+
 LANG = "en"
 CATEGORY = "technology"
-COUNTRY = None           # 'us' ou None – às vezes filtra demais por país
-MAX_POSTS = 5            # quantos posts criar por execução
+COUNTRY = None  # manter None para não filtrar demais
+MAX_POSTS = 5
+MAX_PAGES = 3
 POSTS_DIR = "_posts"
-FALLBACK_IMAGE = "/assets/ai-hero.jpg"   # deve existir no repo
+
+# *** IMPORTANTE: você tem um SVG, então use-o como fallback ***
+FALLBACK_IMAGE = "/assets/ai-hero.svg"
+
 USER_AGENT = "ai-discovery-bot/1.0 (+github actions)"
 
-# ---------- Utilidades ----------
 
-def debug(msg: str) -> None:
+# ---------------- Utils ----------------
+
+def log(msg: str) -> None:
     print(msg, flush=True)
+
 
 def safe_get(d: Dict[str, Any], *keys: str) -> Optional[str]:
     cur: Any = d
@@ -63,61 +69,65 @@ def safe_get(d: Dict[str, Any], *keys: str) -> Optional[str]:
         cur = cur[k]
     return str(cur) if cur is not None else None
 
+
 def clean_text(s: Optional[str]) -> str:
     if not s:
         return ""
-    # remove múltiplos espaços/newlines, e caracteres estranhos
-    s = re.sub(r"\s+", " ", s).strip()
+    s = re.sub(r"\s+", " ", str(s)).strip()
     return s
 
+
 def too_similar(a: str, b: str) -> bool:
-    a = clean_text(a).lower()
-    b = clean_text(b).lower()
-    return a == b or (a and b and (a in b or b in a))
+    a2 = clean_text(a).lower()
+    b2 = clean_text(b).lower()
+    return bool(a2 and b2 and (a2 == b2 or a2 in b2 or b2 in a2))
+
 
 def has_low_value_markers(t: str) -> bool:
-    t_low = (t or "").lower()
+    t2 = t.lower()
     markers = [
         "only available in paid plans",
+        "only available in paid plan",
         "subscribe to read",
         "sign in to continue",
         "under construction",
     ]
-    return any(m in t_low for m in markers)
+    return any(m in t2 for m in markers)
+
 
 def ensure_dir(path: str) -> None:
-    if not os.path.isdir(path):
-        os.makedirs(path, exist_ok=True)
+    os.makedirs(path, exist_ok=True)
+
+
+def build_query() -> str:
+    # Junta com OR, mas mantém < 100 chars
+    parts = [f'"{k}"' if " " in k else k for k in KEYWORDS]
+    q = " OR ".join(parts)
+    if len(q) > 95:
+        q = '"artificial intelligence" OR ai OR "machine learning"'
+    return q
+
 
 def pick_image(article: Dict[str, Any]) -> str:
-    """
-    Tenta apanhar uma imagem credível do item da API.
-    Cai em FALLBACK_IMAGE se nada existir.
-    """
+    # Tenta campos comuns do Newsdata (ou variações) e cai para fallback SVG
     candidates = [
         safe_get(article, "image_url"),
-        safe_get(article, "image"),           # outros esquemas
-        safe_get(article, "source_icon"),
+        safe_get(article, "image"),
         safe_get(article, "source", "icon"),
+        safe_get(article, "source_icon"),
     ]
     for url in candidates:
-        if url and isinstance(url, str) and url.startswith(("http://", "https://")):
+        if url and url.startswith(("http://", "https://")):
             return url
     return FALLBACK_IMAGE
 
-def shorten(s: str, max_len: int = 280) -> str:
-    s = clean_text(s)
-    if len(s) <= max_len:
-        return s
-    return s[: max_len - 1].rstrip() + "…"
 
-def build_query() -> str:
-    # Junta as keywords com OR e corta se estourar ~100 chars (limite do NewsData)
-    parts = [f'"{kw}"' if " " in kw else kw for kw in KEYWORDS]
-    query = " OR ".join(parts)
-    if len(query) > 95:
-        query = '"artificial intelligence" OR ai OR "machine learning"'
-    return query
+def shorten(s: str, max_len: int) -> str:
+    s2 = clean_text(s)
+    return s2 if len(s2) <= max_len else s2[: max_len - 1].rstrip() + "…"
+
+
+# ---------------- API ----------------
 
 def call_api(page: Optional[int] = None) -> Dict[str, Any]:
     params: Dict[str, Any] = {
@@ -133,30 +143,35 @@ def call_api(page: Optional[int] = None) -> Dict[str, Any]:
 
     headers = {"User-Agent": USER_AGENT}
     r = requests.get(API_URL, params=params, headers=headers, timeout=20)
+    # Mostra URL útil para debug
+    log(f"URL: {r.url}")
     r.raise_for_status()
-    return r.json()
+    data = r.json()
 
-def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
-    """
-    Vai buscar artigos até 'limit' utilizando paginação simples.
-    Aplica filtros mínimos de qualidade.
-    """
+    # Newsdata retorna erro dentro de 200 às vezes
+    if isinstance(data, dict) and data.get("status") == "error":
+        raise requests.HTTPError(f"API error: {data}")
+
+    return data
+
+
+def fetch_articles(limit: int) -> List[Dict[str, Any]]:
     if not API_KEY:
-        raise ValueError("NEWS_API_KEY (ou NEWSDATA_API_KEY) not set.")
+        raise ValueError("NEWS_API_KEY (ou NEWSDATA_API_KEY) não está definido.")
 
-    debug("🧠 update_posts.py starting…")
-    debug("📰 Fetching latest AI articles...")
+    log("🧠 update_posts.py starting…")
+    log("🗞️  Fetching latest AI articles…")
 
-    collected: List[Dict[str, Any]] = []
+    out: List[Dict[str, Any]] = []
     page = 1
-    while len(collected) < limit and page <= 3:
+    while len(out) < limit and page <= MAX_PAGES:
         try:
             data = call_api(page=page)
         except requests.HTTPError as e:
-            debug(f"❌ API HTTP error on page {page}: {e}")
+            log(f"❌ Falha na API: {e}")
             break
         except Exception as e:
-            debug(f"❌ API error on page {page}: {e}")
+            log(f"❌ Erro inesperado: {e}")
             break
 
         results = data.get("results") or data.get("articles") or []
@@ -164,7 +179,7 @@ def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
             break
 
         for item in results:
-            if len(collected) >= limit:
+            if len(out) >= limit:
                 break
 
             title = clean_text(safe_get(item, "title"))
@@ -172,66 +187,66 @@ def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
             content = clean_text(safe_get(item, "content"))
             link = clean_text(safe_get(item, "link")) or clean_text(safe_get(item, "url"))
             source_id = clean_text(safe_get(item, "source_id")) or clean_text(safe_get(item, "source"))
+            pub = (
+                clean_text(safe_get(item, "pubDate"))
+                or clean_text(safe_get(item, "published_at"))
+                or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            )
 
-            # filtros de base
+            # Filtros de qualidade
             if not title or not link:
                 continue
-            if has_low_value_markers(desc) or has_low_value_markers(content) or has_low_value_markers(title):
+            if has_low_value_markers(title) or has_low_value_markers(desc) or has_low_value_markers(content):
                 continue
             if too_similar(title, desc) and len(desc) < 60:
-                # praticamente sem informação
                 continue
 
-            item_norm = {
-                "title": title,
-                "description": desc,
-                "content": content,
-                "link": link,
-                "source_id": source_id or "source",
-                "image": pick_image(item),
-                # published date pode vir em vários campos; se não vier, usa now UTC
-                "pubDate": clean_text(safe_get(item, "pubDate"))
-                           or clean_text(safe_get(item, "published_at"))
-                           or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            }
-            collected.append(item_norm)
+            out.append(
+                {
+                    "title": title,
+                    "description": desc,
+                    "content": content,
+                    "link": link,
+                    "source_id": source_id or "source",
+                    "pubDate": pub,
+                    "image": pick_image(item),
+                }
+            )
 
         page += 1
 
-    return collected[:limit]
+    return out[:limit]
+
+
+# ---------------- Enriquecimento ----------------
 
 def enrich_text(title: str, desc: str, content: str, source: str, link: str) -> str:
-    """
-    Gera um conteúdo ampliado (sem usar serviços externos), baseado em título/descrição/conteúdo.
-    É melhor do que uma linha só, e ajuda a aprovação do AdSense.
-    """
-    # base
     base = clean_text(content) or clean_text(desc)
     base = shorten(base, 700)
 
-    # “Porque importa” – heurístico simples
+    # “por que importa” heurístico
     why: List[str] = []
-    title_low = (title or "").lower()
-    if any(k in title_low for k in ["stock", "earnings", "valuation", "market"]):
+    tl = title.lower()
+    if any(k in tl for k in ["stock", "earnings", "valuation", "market"]):
         why.append("Impacto nos mercados e na avaliação de empresas.")
-    if any(k in title_low for k in ["policy", "regulation", "law", "ban"]):
+    if any(k in tl for k in ["policy", "regulation", "law", "ban"]):
         why.append("Mudanças regulatórias podem redefinir o panorama competitivo.")
-    if any(k in title_low for k in ["chip", "gpu", "hardware", "inference"]):
+    if any(k in tl for k in ["chip", "gpu", "hardware", "inference"]):
         why.append("Infraestrutura de hardware influencia performance e custo de IA.")
-    if any(k in title_low for k in ["research", "paper", "breakthrough", "study"]):
-        why.append("Avanços de investigação podem abrir novos casos de uso.")
+    if any(k in tl for k in ["research", "paper", "breakthrough", "study"]):
+        why.append("Avanços de pesquisa podem abrir novos casos de uso.")
     if not why:
         why.append("Relevante para o ecossistema de IA e seus casos de uso.")
 
     bullets: List[str] = []
     for part in re.split(r"[.;]\s+", base)[:4]:
         part = clean_text(part)
-        if part and 25 <= len(part) <= 220:
+        if 25 <= len(part) <= 220:
             bullets.append(part)
 
     pieces: List[str] = []
     pieces.append("### TL;DR")
-    pieces.append(shorten(base, 240) or "Resumo breve do que foi anunciado/aconteceu no mundo da IA.")
+    pieces.append(shorten(base or title, 240))
 
     pieces.append("\n### Por que importa")
     for w in why:
@@ -247,87 +262,86 @@ def enrich_text(title: str, desc: str, content: str, source: str, link: str) -> 
 
     return "\n".join(pieces).strip()
 
+
+# ---------------- Markdown / Writing ----------------
+
 def yaml_escape(s: str) -> str:
-    """
-    Escapa aspas e backslashes para uso seguro em YAML em linha.
-    (evita erros de f-string com barras invertidas)
-    """
-    if s is None:
-        return ""
-    s = s.replace("\\", "\\\\")
-    s = s.replace('"', '\\"')
-    return s
+    """Escapa aspas duplas para YAML de forma simples."""
+    return clean_text(s).replace('"', '\\"')
+
 
 def build_markdown(article: Dict[str, Any]) -> str:
     title = article["title"]
-    description = article.get("description") or ""
-    body = enrich_text(title, description, article.get("content", ""), article["source_id"], article["link"])
+    desc = article.get("description", "") or ""
+    body = enrich_text(title, desc, article.get("content", ""), article["source_id"], article["link"])
 
-    # front matter
-    fm = {
-        "layout": "post",
-        "title": yaml_escape(title),
-        "date": (article.get("pubDate") or datetime.now(timezone.utc).date().isoformat())[:10],
-        "excerpt": yaml_escape(shorten(description, 300)),
-        "image": article.get("image") or FALLBACK_IMAGE,
-        "source": yaml_escape(article.get("source_id") or "source"),
-        "source_url": yaml_escape(article.get("link") or ""),
-    }
+    # Valores já escapados (evita backslashes dentro de f-strings)
+    title_esc = yaml_escape(title)
+    excerpt_esc = yaml_escape(shorten(desc or title, 300))
+    image_url = article.get("image") or FALLBACK_IMAGE
+    source_esc = yaml_escape(article.get("source_id") or "source")
+    source_url_esc = yaml_escape(article.get("link") or "")
 
-    # YAML manual simples
-    fm_lines = ["---"]
-    fm_lines.append(f'layout: {fm["layout"]}')
-    fm_lines.append(f'title: "{fm["title"]}"')
-    fm_lines.append(f'date: {fm["date"]}')
-    fm_lines.append(f'excerpt: "{fm["excerpt"]}"')
-    fm_lines.append('categories: [ai, news]')
-    fm_lines.append(f'image: "{fm["image"]}"')
-    fm_lines.append(f'source: "{fm["source"]}"')
-    fm_lines.append(f'source_url: "{fm["source_url"]}"')
-    fm_lines.append("---")
+    date_iso = datetime.now(timezone.utc).date().isoformat()
 
-    md = "\n".join(fm_lines) + "\n\n" + body.strip() + "\n"
-    return md
+    fm_lines = [
+        "---",
+        "layout: post",
+        f'title: "{title_esc}"',
+        f"date: {date_iso}",
+        f'excerpt: "{excerpt_esc}"',
+        "categories: [ai, news]",
+        f'image: "{image_url}"',
+        f'source: "{source_esc}"',
+        f'source_url: "{source_url_esc}"',
+        "---",
+    ]
 
-def make_filename(title: str, date_str: Optional[str] = None) -> str:
-    date_part = (date_str or datetime.now(timezone.utc).date().isoformat())[:10]
+    return "\n".join(fm_lines) + "\n\n" + body + "\n"
+
+
+def make_filename(title: str, pub_date_iso: Optional[str]) -> str:
+    date_part = (pub_date_iso or datetime.now(timezone.utc).date().isoformat())[:10]
     slug = slugify(title)[:80] or "post"
     return os.path.join(POSTS_DIR, f"{date_part}-{slug}.md")
+
 
 def write_post(article: Dict[str, Any]) -> Optional[str]:
     ensure_dir(POSTS_DIR)
     path = make_filename(article["title"], article.get("pubDate"))
     if os.path.exists(path):
-        debug(f"↩︎ Skipping (already exists): {os.path.basename(path)}")
+        log(f"↩︎ Skipping (already exists): {os.path.basename(path)}")
         return None
-    content = build_markdown(article)
+    md = build_markdown(article)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
+        f.write(md)
     return path
 
-# ---------- Main ----------
+
+# ---------------- Main ----------------
 
 def main() -> None:
     try:
-        articles = fetch_articles(limit=MAX_POSTS)
-        if not articles:
-            debug("ℹ️ No articles found.")
+        arts = fetch_articles(limit=MAX_POSTS)
+        if not arts:
+            log("ℹ️ Nenhum artigo encontrado.")
             sys.exit(0)
 
         created = 0
-        for art in articles:
-            path = write_post(art)
-            if path:
+        for a in arts:
+            p = write_post(a)
+            if p:
                 created += 1
-                debug(f"✅ Post criado: {path}")
+                log(f"✅ Post criado: {p}")
 
         if created == 0:
-            debug("ℹ️ Nothing new to write.")
+            log("ℹ️ Nada novo para escrever.")
         else:
-            debug(f"🎉 Done. {created} post(s) written.")
+            log(f"🎉 Concluído. {created} post(s) escritos.")
     except Exception as e:
-        debug(f"❌ Erro: {e}")
+        log(f"❌ Erro: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
