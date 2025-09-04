@@ -5,7 +5,7 @@ title: AI Discovery Blog
 
 <!-- HERO -->
 <section style="max-width: 980px; margin: 0 auto; padding: 2rem 1rem;">
-  <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.2rem; align-items: center;">
+  <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.2rem;align-items:center;">
     <div>
       <h1 style="margin-top:0;">Stay ahead in AI — daily.</h1>
       <p>
@@ -13,45 +13,40 @@ title: AI Discovery Blog
         product launches, research breakthroughs, real-world use cases.
         Each post includes a quick summary so you can skim or dive deeper.
       </p>
-      <p style="margin: 0.75rem 0 0;">
-        <em>Tip:</em> Click any headline to read the summary and source link.
-      </p>
+      <p style="margin:.75rem 0 0;"><em>Tip:</em> Click any headline to read the summary and source link.</p>
     </div>
 
-    <!-- Local hero image with bulletproof fallbacks -->
+    <!-- Use SVG hero (no .jpg anywhere) -->
     <div>
-      {% assign hero_src = '/assets/ai-hero-home.jpg' %}
       <img
-        src="{{ hero_src | relative_url }}"
+        src="/assets/ai-hero.svg"
         alt="AI Discovery"
-        style="width:100%; border-radius:12px; display:block;"
-        onerror="this.onerror=null;this.src='{{ '/assets/ai-hero.jpg' | relative_url }}';"
+        width="720" height="420"
+        style="width:100%;height:auto;border-radius:12px;display:block;"
       >
     </div>
   </div>
 </section>
 
 <!-- POSTS LIST -->
-<section style="max-width: 980px; margin: 0 auto; padding: 0 1rem 2rem;">
+<section style="max-width:980px;margin:0 auto;padding:0 1rem 2rem;">
   <ul class="post-list">
     {% for post in site.posts %}
-      <li class="post-item">
-        {% assign thumb = post.image %}
-        {% if thumb == nil or thumb == '' or thumb contains 'http://' %}
-          {% assign thumb = '/assets/ai-hero.jpg' %}
-        {% endif %}
+      <li class="post-item" style="margin-bottom:2.25rem;">
+        {% assign thumb = post.image | default: '/assets/ai-hero.svg' %}
 
-        <a href="{{ post.url | relative_url }}">
+        <a href="{{ post.url | relative_url }}" aria-label="Open {{ post.title }}">
           <img
             class="post-thumbnail"
-            src="{{ thumb | relative_url }}"
+            src="{{ thumb }}"
             alt="{{ post.title }}"
             loading="lazy"
-            onerror="this.onerror=null;this.src='{{ '/assets/ai-hero.jpg' | relative_url }}';"
+            width="1200" height="630"
+            style="width:100%;height:auto;border-radius:8px;display:block;margin:0 0 .6rem 0;"
           >
         </a>
 
-        <h2 style="margin: 0.2rem 0 0.2rem;">
+        <h2 style="margin:.2rem 0 .2rem;">
           <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
         </h2>
 
