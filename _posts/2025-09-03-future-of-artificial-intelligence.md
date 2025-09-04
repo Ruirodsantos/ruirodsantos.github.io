@@ -4,7 +4,7 @@ title: "The Future of Artificial Intelligence: Trends, Challenges, and Opportuni
 date: 2025-09-03
 excerpt: "Artificial Intelligence continues to evolve at a rapid pace. From generative models to regulation and ethics, here’s a deep dive into the most important AI trends shaping 2025 and beyond."
 categories: [ai, news, analysis]
-image: "/assets/ai-hero.jpg"
+image: "/assets/ai-hero.svg"
 source: "AI Discovery Blog"
 source_url: "https://ruirodsantos.github.io/"
 ---
