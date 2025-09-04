@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>{{ page.title }}</title>
-  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/assets/style.css" />
+  <!-- AdSense (ok to keep) -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -19,56 +19,64 @@
   </header>
 
   <main class="post-page">
+    <!-- Ad before content -->
+    <ins class="adsbygoogle"
+      style="display:block; text-align:center; margin-bottom:20px;"
+      data-ad-client="ca-pub-7715134134171575"
+      data-ad-slot="1234567890"
+      data-ad-format="auto"
+      data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+
     <article>
       <h2>{{ page.title }}</h2>
       <p class="post-meta"><strong>Published on:</strong> {{ page.date | date: "%B %d, %Y" }}</p>
 
-      {% assign main_img = page.image %}
-      {% if main_img == nil or main_img == '' or main_img contains 'http://' %}
-        {% assign main_img = '/assets/ai-hero.jpg' %}
-      {% endif %}
-
+      {% assign hero = page.image | default: '/assets/ai-hero.svg' %}
       <img
-        class="post-image"
-        src="{{ main_img | relative_url }}"
+        src="{{ hero }}"
         alt="{{ page.title }}"
-        onerror="this.onerror=null;this.src='{{ '/assets/ai-hero.jpg' | relative_url }}';"
-      >
+        class="post-image"
+        width="1200" height="630"
+      />
 
       <div class="post-content">
         {{ content }}
       </div>
 
-      {% if page.source_url or page.source %}
-      <p class="post-source">
-        Source:
-        {% if page.source_url %}
-          <a href="{{ page.source_url }}" rel="noopener nofollow" target="_blank">{{ page.source | default: 'source' }}</a>
-        {% else %}
-          {{ page.source | default: 'source' }}
-        {% endif %}
-      </p>
+      {% if page.source or page.source_url %}
+        <p class="post-source">
+          Source:
+          {% if page.source_url %}
+            <a href="{{ page.source_url }}" rel="nofollow noopener" target="_blank">{{ page.source | default: 'link' }}</a>
+          {% else %}
+            {{ page.source }}
+          {% endif %}
+        </p>
       {% endif %}
 
+      <!-- Share -->
       <div style="margin-top: 20px;">
-        <strong>Share this post:</strong><br />
+        <strong>Share this post:</strong><br>
         <a href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url }}" target="_blank" rel="noopener">Share on X</a> |
         <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ page.url | absolute_url }}&title={{ page.title | uri_escape }}" target="_blank" rel="noopener">Share on LinkedIn</a>
       </div>
 
-      {% assign related = site.posts | where_exp: "p", "p.url != page.url" | slice: 0, 3 %}
-      {% if related.size > 0 %}
-      <section style="margin-top: 40px;">
-        <h3>Related Posts</h3>
-        <ul class="post-list">
-          {% for p in related %}
-          <li class="post-item">
-            <a href="{{ p.url | relative_url }}">{{ p.title }}</a><br />
-            <span class="post-meta">{{ p.date | date: "%B %d, %Y" }}</span>
-          </li>
-          {% endfor %}
-        </ul>
-      </section>
+      <!-- Related (simple: by first category) -->
+      {% assign rcat = page.categories | first %}
+      {% assign related = site.posts | where_exp: 'p', 'p.url != page.url' | where_exp: 'p', 'p.categories contains rcat' | slice: 0, 3 %}
+      {% if related and related.size > 0 %}
+        <section style="margin-top:40px;">
+          <h3>Related Posts</h3>
+          <ul class="post-list">
+            {% for p in related %}
+              <li class="post-item">
+                <a href="{{ p.url | relative_url }}">{{ p.title }}</a><br>
+                <span class="post-meta">{{ p.date | date: "%B %d, %Y" }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
       {% endif %}
 
       <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
@@ -80,7 +88,6 @@
       <div class="footer-copy">© {{ "now" | date: "%Y" }} {{ site.title }} — All rights reserved</div>
       <div class="social-icons">
         <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
-          <!-- simple coin -->
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>
           Earn with me
         </a>
