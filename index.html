@@ -4,8 +4,8 @@ title: AI Discovery Blog
 ---
 
 <!-- HERO -->
-<section style="max-width:980px;margin:0 auto;padding:2rem 1rem;">
-  <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.2rem;align-items:center;">
+<section style="max-width: 980px; margin: 0 auto; padding: 2rem 1rem;">
+  <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.2rem; align-items: center;">
     <div>
       <h1 style="margin-top:0;">Stay ahead in AI — daily.</h1>
       <p>
@@ -13,47 +13,45 @@ title: AI Discovery Blog
         product launches, research breakthroughs, real-world use cases.
         Each post includes a quick summary so you can skim or dive deeper.
       </p>
-      <p style="margin:.75rem 0 0;">
+      <p style="margin: 0.75rem 0 0;">
         <em>Tip:</em> Click any headline to read the summary and source link.
       </p>
     </div>
+
+    <!-- Local hero image with bulletproof fallbacks -->
     <div>
-      <img src="{{ '/assets/ai-hero-card.jpg' | relative_url }}"
-           alt="AI Discovery"
-           style="width:100%;border-radius:12px;display:block;">
+      {% assign hero_src = '/assets/ai-hero-home.jpg' %}
+      <img
+        src="{{ hero_src | relative_url }}"
+        alt="AI Discovery"
+        style="width:100%; border-radius:12px; display:block;"
+        onerror="this.onerror=null;this.src='{{ '/assets/ai-hero.jpg' | relative_url }}';"
+      >
     </div>
   </div>
 </section>
 
 <!-- POSTS LIST -->
-<section style="max-width:980px;margin:0 auto;padding:0 1rem 2rem;">
+<section style="max-width: 980px; margin: 0 auto; padding: 0 1rem 2rem;">
   <ul class="post-list">
     {% for post in site.posts %}
       <li class="post-item">
-
-        {%- comment -%}
-        Resolve image:
-        - if post.image is absolute (contains ://) use as-is
-        - if it’s a local path, run through relative_url
-        - if empty, use fallback
-        {%- endcomment -%}
-        {% assign raw_img = post.image | default: '/assets/ai-hero.jpg' %}
-        {% if raw_img contains '://' %}
-          {% assign img_url = raw_img %}
-        {% else %}
-          {% assign img_url = raw_img | relative_url %}
+        {% assign thumb = post.image %}
+        {% if thumb == nil or thumb == '' or thumb contains 'http://' %}
+          {% assign thumb = '/assets/ai-hero.jpg' %}
         {% endif %}
 
-        <a href="{{ post.url | relative_url }}" style="display:block;">
+        <a href="{{ post.url | relative_url }}">
           <img
             class="post-thumbnail"
-            src="{{ img_url }}"
-            alt="{{ post.title | escape }}"
+            src="{{ thumb | relative_url }}"
+            alt="{{ post.title }}"
             loading="lazy"
-            onerror="this.onerror=null;this.src='{{ '/assets/ai-hero.jpg' | relative_url }}';">
-          </a>
+            onerror="this.onerror=null;this.src='{{ '/assets/ai-hero.jpg' | relative_url }}';"
+          >
+        </a>
 
-        <h2 style="margin:.2rem 0 .2rem;">
+        <h2 style="margin: 0.2rem 0 0.2rem;">
           <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
         </h2>
 
