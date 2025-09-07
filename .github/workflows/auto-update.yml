@@ -2,9 +2,9 @@ name: Auto-update blog posts
 
 on:
   schedule:
-    # Every day at 08:15 UTC
+    # corre todos os dias às 08:15 UTC
     - cron: "15 8 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,43 +13,49 @@ jobs:
   update:
     runs-on: ubuntu-latest
 
+    # Captura as chaves de vários sítios (se existir apenas NEWS_API_KEY, serve)
+    env:
+      NEWS_API_KEY: ${{ secrets.NEWS_API_KEY || vars.NEWS_API_KEY }}
+      NEWSDATA_API_KEY_SECRET: ${{ secrets.NEWSDATA_API_KEY || vars.NEWSDATA_API_KEY }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests python-slugify
 
-      - name: Ensure cache dir
+      # Resolve a chave: se existir NEWSDATA_API_KEY usa-a; senão usa NEWS_API_KEY
+      - name: Resolve API key
+        id: api
+        shell: bash
+        run: |
+          API="${NEWSDATA_API_KEY_SECRET:-$NEWS_API_KEY}"
+          if [ -z "$API" ]; then
+            echo "❌ No API key found. Add NEWS_API_KEY (or NEWSDATA_API_KEY) as a repo secret."
+            exit 1
+          fi
+          echo "✅ API key is present."
+          echo "api=$API" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure cache dir (assets/cache)
         run: |
           mkdir -p assets/cache
           [ -f assets/cache/.gitkeep ] || : > assets/cache/.gitkeep
 
-      # Show that the secret is present without leaking it
-      - name: Check API key presence
+      - name: Run updater (fetch + enrich + write)
         env:
-          NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY }}
-        run: |
-          if [ -z "${NEWSDATA_API_KEY}" ]; then
-            echo "❌ NEWSDATA_API_KEY missing (Settings → Actions → Secrets)."
-            exit 1
-          fi
-          echo "✅ Key present (length: ${#NEWSDATA_API_KEY})."
-
-      - name: Run updater (fetch + write)
-        env:
-          NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY }}
-        run: |
-          python scripts/update_posts.py
+          # Passamos a mesma chave para as duas envs; o script aceita qualquer uma
+          NEWSDATA_API_KEY: ${{ steps.api.outputs.api }}
+          NEWS_API_KEY:     ${{ steps.api.outputs.api }}
+        run: python scripts/update_posts.py
 
       - name: Commit & push if changed
         run: |
@@ -59,6 +65,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "[auto] Update posts [skip ci]"
+            git commit -m "[${{ github.ref_name }} $GITHUB_RUN_NUMBER] Auto-update blog posts [skip ci]"
             git push
           fi
