@@ -2,14 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-AI Discovery Blog updater (stable).
+Auto-updater for AI Discovery Blog
 
-- Fetches AI/tech news from Newsdata (last 48h)
-- Quality filters (no 1-liners)
-- Downloads/caches article image when possible
-- Topic heroes / rotating heroes / final fallback
-- Uses the article's real pubDate for filename and front-matter
-- Skips duplicates by slug across the whole _posts folder
+- Vai à Newsdata e busca artigos sobre IA (sem filtros de datas — só paginação).
+- Se a API devolver 422 (query inválida/comprida), volta a tentar com query reduzida.
+- Imagens:
+    1) tenta a imagem do próprio artigo (faz download para assets/cache/)
+    2) se não houver, usa heróis por tópico (policy, chips, markets, research, health, edu)
+    3) se não houver, roda heróis genéricos (ai-hero-1..5.svg) existentes no repo
+    4) último fallback: /assets/ai-hero.svg
+- Escreve .md em _posts/ com front-matter seguro.
+
+Requisitos:  pip install requests python-slugify
+Env:         NEWSDATA_API_KEY  (ou NEWS_API_KEY)
 """
 
 from __future__ import annotations
@@ -17,22 +22,20 @@ from __future__ import annotations
 import os
 import re
 import sys
-import glob
-import json
 import hashlib
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
 import requests
 from slugify import slugify
 
-# ====== Config ======
+# ---------------- Config ----------------
 API_URL = "https://newsdata.io/api/1/news"
 API_KEY = os.getenv("NEWSDATA_API_KEY") or os.getenv("NEWS_API_KEY")
 
+# Query curta (<100 chars) p/ evitar 422 do Newsdata
 KEYWORDS = [
-    "ai", "artificial intelligence", "machine learning",
-    "openai", "anthropic", "meta ai", "google ai"
+    '"artificial intelligence"', "ai", '"machine learning"', "openai", "anthropic"
 ]
 LANG = "en"
 CATEGORY = "technology"
@@ -40,8 +43,9 @@ MAX_POSTS = 5
 
 POSTS_DIR = "_posts"
 ASSET_CACHE_DIR = "assets/cache"
+USER_AGENT = "ai-discovery-bot/1.4 (+github actions)"
 
-# Image choices
+# Imagens
 GENERIC_FALLBACK = "/assets/ai-hero.svg"
 TOPIC_HEROES = {
     "policy":   "/assets/topic-policy.svg",
@@ -59,71 +63,50 @@ ROTATE_CANDIDATES = [
     "/assets/ai-hero-5.svg",
 ]
 IMG_EXT_WHITELIST = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}
-USER_AGENT = "ai-discovery-bot/1.4 (+github actions)"
 
-# ====== Helpers ======
+# ---------------- Utils ----------------
 def debug(msg: str) -> None:
     print(msg, flush=True)
 
-def clean(s: Optional[str]) -> str:
+def clean_text(s: Optional[str]) -> str:
     if not s:
         return ""
     return re.sub(r"\s+", " ", str(s)).strip()
 
-def ensure_dir(p: str) -> None:
-    if not os.path.isdir(p):
-        os.makedirs(p, exist_ok=True)
+def ensure_dir(path: str) -> None:
+    if not os.path.isdir(path):
+        os.makedirs(path, exist_ok=True)
 
-def yq(s: str) -> str:
-    """YAML-safe quotes (escape double quotes)."""
-    return clean(s).replace('"', r'\"')
+def yml_escape(s: str) -> str:
+    return clean_text(s).replace('"', r'\"')
 
-def shorten(s: str, n: int = 300) -> str:
-    s = clean(s)
-    return s if len(s) <= n else s[: n - 1].rstrip() + "…"
+def shorten(s: str, max_len: int = 280) -> str:
+    s = clean_text(s)
+    if len(s) <= max_len:
+        return s
+    return s[: max_len - 1].rstrip() + "…"
 
-def parse_pubdate(s: Optional[str]) -> datetime:
-    # Accept common formats; fall back to now (UTC)
-    if not s:
-        return datetime.now(timezone.utc)
-    for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
-        try:
-            dt = datetime.strptime(s, fmt)
-            return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
-        except ValueError:
-            continue
-    try:
-        return datetime.fromisoformat(s).astimezone(timezone.utc)
-    except Exception:
-        return datetime.now(timezone.utc)
-
+# ---------------- API ----------------
 def build_query() -> str:
-    q = " OR ".join(KEYWORDS)
-    return q if len(q) <= 95 else '"artificial intelligence" OR ai OR "machine learning"'
+    # Mantém a query bem curta
+    return " OR ".join(KEYWORDS)
 
-def newsdata_params(page: int | None = None) -> Dict[str, Any]:
-    # last 48h window
-    now = datetime.now(timezone.utc)
-    start = (now - timedelta(hours=48)).strftime("%Y-%m-%d")
-    end   = (now + timedelta(days=1)).strftime("%Y-%m-%d")
-    p = {
+def call_api(page: Optional[int] = None, q: Optional[str] = None) -> Dict[str, Any]:
+    params = {
         "apikey": API_KEY,
-        "q": build_query(),
+        "q": q or build_query(),
         "language": LANG,
         "category": CATEGORY,
-        "from_date": start,
-        "to_date": end,
     }
     if page:
-        p["page"] = page
-    return p
+        params["page"] = page
 
-def call_api(page: int | None = None) -> Dict[str, Any]:
-    r = requests.get(API_URL, params=newsdata_params(page), headers={"User-Agent": USER_AGENT}, timeout=25)
+    r = requests.get(API_URL, params=params, headers={"User-Agent": USER_AGENT}, timeout=20)
     r.raise_for_status()
     return r.json()
 
-def guess_ext(ct: str) -> str:
+# ---------------- Image helpers ----------------
+def guess_ext_from_ct(ct: str) -> str:
     ct = (ct or "").lower()
     if "svg" in ct: return ".svg"
     if "webp" in ct: return ".webp"
@@ -131,40 +114,46 @@ def guess_ext(ct: str) -> str:
     if "gif" in ct: return ".gif"
     return ".jpg"
 
-def download_image(url: str, title: str) -> Optional[str]:
+def download_and_cache_image(url: str, title: str) -> Optional[str]:
     try:
-        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=25, stream=True)
+        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=20, stream=True)
         resp.raise_for_status()
         ct = (resp.headers.get("Content-Type") or "").lower()
         if "image" not in ct:
             return None
-        base = os.path.basename(urlparse(url).path) or slugify(title) or "img"
-        root, ext = os.path.splitext(base)
+
+        path_name = os.path.basename(urlparse(url).path) or slugify(title)
+        base, ext = os.path.splitext(path_name)
         if ext.lower() not in IMG_EXT_WHITELIST:
-            ext = guess_ext(ct)
+            ext = guess_ext_from_ct(ct)
+
         h = hashlib.sha1(url.encode("utf-8")).hexdigest()[:8]
-        filename = f"{slugify(root)}-{h}{ext}"
+        filename = f"{slugify(base) or 'img'}-{h}{ext}"
+
         ensure_dir(ASSET_CACHE_DIR)
-        with open(os.path.join(ASSET_CACHE_DIR, filename), "wb") as f:
+        abs_path = os.path.join(ASSET_CACHE_DIR, filename)
+
+        with open(abs_path, "wb") as f:
             for chunk in resp.iter_content(65536):
                 if chunk:
                     f.write(chunk)
+
         return f"/{ASSET_CACHE_DIR}/{filename}"
     except Exception as e:
-        debug(f"img download failed: {e}")
+        debug(f"img download fail: {e}")
         return None
 
-def detect_topic(t: str, d: str) -> Optional[str]:
-    text = f"{t} {d}".lower()
-    if any(k in text for k in ["policy", "regulation", "law", "ban"]): return "policy"
-    if any(k in text for k in ["gpu", "chip", "nvidia", "amd", "hardware"]): return "chips"
-    if any(k in text for k in ["stock", "market", "shares", "revenue", "valuation"]): return "markets"
-    if any(k in text for k in ["research", "paper", "breakthrough", "study"]): return "research"
-    if any(k in text for k in ["health", "medical", "doctor", "clinical"]): return "health"
-    if any(k in text for k in ["education", "school", "classroom", "student"]): return "edu"
+def detect_topic(title: str, desc: str) -> Optional[str]:
+    t = f"{title} {desc}".lower()
+    if any(k in t for k in ["policy", "regulation", "law", "ban"]): return "policy"
+    if any(k in t for k in ["gpu", "chip", "nvidia", "amd", "hardware"]): return "chips"
+    if any(k in t for k in ["stock", "market", "shares", "revenue", "valuation"]): return "markets"
+    if any(k in t for k in ["research", "paper", "breakthrough", "study"]): return "research"
+    if any(k in t for k in ["health", "medical", "doctor", "clinical"]): return "health"
+    if any(k in t for k in ["education", "school", "classroom", "student"]): return "edu"
     return None
 
-def rotating_hero(title: str) -> str:
+def pick_rotating_hero(title: str) -> str:
     existing = [p for p in ROTATE_CANDIDATES if os.path.exists(p.lstrip("/"))]
     if not existing:
         return GENERIC_FALLBACK
@@ -172,126 +161,147 @@ def rotating_hero(title: str) -> str:
     return existing[idx]
 
 def pick_image(item: Dict[str, Any], title: str, desc: str) -> str:
+    # 1) imagem do artigo
     for k in ("image_url", "image"):
-        url = clean(item.get(k))
-        if url.startswith(("http://", "https://")):
-            local = download_image(url, title)
+        url = clean_text(item.get(k))
+        if url and url.startswith(("http://", "https://")):
+            local = download_and_cache_image(url, title)
             if local:
                 return local
+    # 2) herói por tópico
     topic = detect_topic(title, desc)
-    if topic and os.path.exists(TOPIC_HEROES.get(topic, "").lstrip("/")):
-        return TOPIC_HEROES[topic]
-    return rotating_hero(title)
+    if topic:
+        candidate = TOPIC_HEROES.get(topic)
+        if candidate and os.path.exists(candidate.lstrip("/")):
+            return candidate
+    # 3) rotação de genéricos
+    return pick_rotating_hero(title)
 
-# ====== Fetch & build ======
-def load_existing_slugs() -> set[str]:
-    slugs = set()
-    for path in glob.glob(os.path.join(POSTS_DIR, "*.md")):
-        base = os.path.basename(path)
-        # YYYY-mm-dd-<slug>.md
-        parts = base.split("-", 3)
-        if len(parts) >= 4:
-            slug = parts[3][:-3]  # drop .md
-            slugs.add(slug)
-    return slugs
-
-def make_slug(title: str) -> str:
-    return slugify(title)[:80] or "post"
-
+# ---------------- Posts ----------------
 def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
     if not API_KEY:
         raise ValueError("API KEY not set (NEWSDATA_API_KEY or NEWS_API_KEY).")
-    debug("📰 Fetching last 48h…")
-    collected: List[Dict[str, Any]] = []
-    seen = set()
+
+    debug("📰 Fetching AI news (page-based, no date filters)…")
+    items: List[Dict[str, Any]] = []
     page = 1
-    while len(collected) < limit and page <= 5:
-        data = call_api(page)
-        items = data.get("results") or []
-        if not items:
-            break
-        for it in items:
-            if len(collected) >= limit:
+
+    while len(items) < limit and page <= 5:
+        try:
+            data = call_api(page=page)
+        except requests.HTTPError as e:
+            if getattr(e.response, "status_code", None) == 422:
+                debug("⚠️ 422 from API. Retrying with shorter query…")
+                try:
+                    data = call_api(page=page, q='ai OR "machine learning"')
+                except Exception as e2:
+                    debug(f"❌ API still failing on retry: {e2}")
+                    break
+            else:
+                debug(f"❌ API HTTP error: {e}")
                 break
-            title = clean(it.get("title"))
-            desc  = clean(it.get("description"))
-            link  = clean(it.get("link") or it.get("url"))
+        except Exception as e:
+            debug(f"❌ API error: {e}")
+            break
+
+        results = data.get("results") or data.get("articles") or []
+        if not results:
+            break
+
+        for it in results:
+            if len(items) >= limit:
+                break
+            title = clean_text(it.get("title"))
+            desc  = clean_text(it.get("description"))
+            link  = clean_text(it.get("link") or it.get("url"))
+            source_id = clean_text(it.get("source_id") or it.get("source") or "source")
+            pubdate   = clean_text(it.get("pubDate") or it.get("published_at") or "")
+
             if not title or not link:
                 continue
-            if len(title) < 8 or len(desc) < 40:
-                # too weak — avoid low value
-                continue
-            slug = make_slug(title)
-            if slug in seen:
-                continue
-            pub = parse_pubdate(it.get("pubDate") or it.get("published_at"))
-            img = pick_image(it, title, desc)
-            collected.append({
+
+            items.append({
                 "title": title,
-                "desc": desc,
+                "description": desc,
                 "link": link,
-                "source": clean(it.get("source_id") or it.get("source") or "source"),
-                "image": img,
-                "pub": pub,
-                "slug": slug,
+                "source_id": source_id,
+                "image": pick_image(it, title, desc),
+                "pubDate": pubdate or datetime.now(timezone.utc).isoformat(),
             })
-            seen.add(slug)
         page += 1
-    return collected[:limit]
 
-def fm_date(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).date().isoformat()
+    return items[:limit]
 
-def build_md(a: Dict[str, Any]) -> str:
-    fm = [
+def front_matter(article: Dict[str, Any]) -> str:
+    safe_title   = yml_escape(article["title"])
+    safe_excerpt = yml_escape(article.get("description") or "")
+    image        = article.get("image") or GENERIC_FALLBACK
+    source       = yml_escape(article.get("source_id") or "source")
+    source_url   = yml_escape(article.get("link") or "")
+
+    lines = [
         "---",
         "layout: post",
-        f'title: "{yq(a["title"])}"',
-        f'date: {fm_date(a["pub"])}',
-        f'excerpt: "{shorten(a["desc"], 300)}"',
+        f'title: "{safe_title}"',
+        f'date: {datetime.now(timezone.utc).date().isoformat()}',
+        f'excerpt: "{shorten(safe_excerpt, 300)}"',
         "categories: [ai, news]",
-        f'image: "{a["image"] or GENERIC_FALLBACK}"',
-        f'source: "{yq(a["source"])}"',
-        f'source_url: "{yq(a["link"])}"',
+        f'image: "{image}"',
+        f'source: "{source}"',
+        f'source_url: "{source_url}"',
         "---",
     ]
-    body = a["desc"] or ""
-    return "\n".join(fm) + "\n\n" + body + "\n"
+    return "\n".join(lines)
 
-def make_filename(a: Dict[str, Any]) -> str:
-    date_part = fm_date(a["pub"])
-    return os.path.join(POSTS_DIR, f"{date_part}-{a['slug']}.md")
+def build_markdown(article: Dict[str, Any]) -> str:
+    body = article.get("description") or ""
+    return front_matter(article) + "\n\n" + body + "\n"
 
-def write_posts(arts: List[Dict[str, Any]]) -> int:
+def only_date(iso_ts: str) -> str:
+    try:
+        return iso_ts[:10]
+    except Exception:
+        return datetime.now(timezone.utc).date().isoformat()
+
+def make_filename(title: str, pubdate: Optional[str] = None) -> str:
+    date_part = only_date(pubdate or datetime.now(timezone.utc).isoformat())
+    slug = slugify(title)[:80] or "post"
+    return os.path.join(POSTS_DIR, f"{date_part}-{slug}.md")
+
+def write_post(article: Dict[str, Any]) -> Optional[str]:
     ensure_dir(POSTS_DIR)
-    existing_slugs = load_existing_slugs()
-    written = 0
-    for a in arts:
-        if a["slug"] in existing_slugs:
-            debug(f"↩︎ Skip duplicate slug: {a['slug']}")
-            continue
-        path = make_filename(a)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(build_md(a))
-        debug(f"✅ Wrote {os.path.basename(path)}")
-        existing_slugs.add(a["slug"])
-        written += 1
-    return written
+    path = make_filename(article["title"], article.get("pubDate"))
+    if os.path.exists(path):
+        debug(f"↩︎ Skip (exists): {os.path.basename(path)}")
+        return None
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(build_markdown(article))
+    debug(f"✅ Wrote: {path}")
+    return path
 
-# ====== Main ======
-def main():
+# ---------------- Main ----------------
+def main() -> None:
     try:
         ensure_dir(ASSET_CACHE_DIR)
-        # ensure cache tracked
+        # garante que a pasta vai ao repo
         gk = os.path.join(ASSET_CACHE_DIR, ".gitkeep")
         if not os.path.exists(gk):
             with open(gk, "w", encoding="utf-8") as fp:
                 fp.write("")
-        arts = fetch_articles(MAX_POSTS)
-        n = write_posts(arts)
-        debug(f"Done. {n} new post(s).")
+
+        articles = fetch_articles(limit=MAX_POSTS)
+        if not articles:
+            debug("ℹ️ No articles returned.")
+            sys.exit(0)
+
+        created = 0
+        for a in articles:
+            if write_post(a):
+                created += 1
+
+        debug(f"🎉 Done. {created} new post(s).")
     except Exception as e:
-        debug(f"Error: {e}")
+        debug(f"❌ Error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
