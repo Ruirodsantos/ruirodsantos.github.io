@@ -2,15 +2,15 @@ name: Auto-update blog posts
 
 on:
   schedule:
-    # Todos os dias às 08:15 UTC
+    # Every day at 08:15 UTC
     - cron: "15 8 * * *"
-  workflow_dispatch: {}   # permite correr manualmente
+  workflow_dispatch:
 
 permissions:
-  contents: write         # necessário para commit/push
+  contents: write   # needed to push commits
 
+# Prefer GitHub Secrets; fall back to Repo Variables if present
 env:
-  # Tenta secret primeiro; se não existir, tenta repo VARs também.
   NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY || secrets.NEWS_API_KEY || vars.NEWSDATA_API_KEY || vars.NEWS_API_KEY }}
 
 jobs:
@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -40,14 +42,14 @@ jobs:
           mkdir -p assets/cache
           [ -f assets/cache/.gitkeep ] || : > assets/cache/.gitkeep
 
-      # Passo de diagnóstico (não imprime a chave!)
+      # Quick diagnostic (doesn't print the key)
       - name: Check API key presence (debug)
         run: |
           if [ -z "${NEWSDATA_API_KEY}" ]; then
-            echo "❌ NEWSDATA_API_KEY está vazia. Verifica o Secret/Variable no repositório."
+            echo "❌ NEWSDATA_API_KEY is empty. Add it as a Secret/Variable."
             exit 1
           else
-            echo "✅ NEWSDATA_API_KEY está presente."
+            echo "✅ NEWSDATA_API_KEY is present."
           fi
 
       - name: Run updater (fetch + enrich + write)
@@ -60,7 +62,10 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+
+          # only add generated content
+          git add _posts/**/*.md _posts/*.md assets/cache || true
+
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
