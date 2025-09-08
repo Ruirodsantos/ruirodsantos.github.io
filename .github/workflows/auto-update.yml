@@ -2,7 +2,7 @@ name: Auto-update blog posts
 
 on:
   schedule:
-    - cron: "15 8 * * *"        # todos os dias 08:15 UTC
+    - cron: "15 8 * * *"   # daily 08:15 UTC
   workflow_dispatch: {}
 
 permissions:
@@ -15,9 +15,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -31,34 +28,56 @@ jobs:
 
       - name: Ensure folders
         run: |
-          mkdir -p assets/cache
+          mkdir -p assets/cache _posts
           [ -f assets/cache/.gitkeep ] || : > assets/cache/.gitkeep
-          mkdir -p _posts
 
-      # ⚠️ Falha imediatamente se a chave não existir
-      - name: Check API key presence
+      - name: Check API key
         env:
-          NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY || secrets.NEWSDATA_API_KEY }}
         run: |
-          if [ -z "${NEWSDATA_API_KEY}" ]; then
-            echo "❌ NEWSDATA_API_KEY missing (Settings → Actions → Secrets)."
+          if [ -z "${NEWS_API_KEY}" ]; then
+            echo "❌ NEWS_API_KEY is missing (Settings → Actions → Secrets)."
             exit 1
+          else
+            echo "✅ NEWS_API_KEY present (masked)."
           fi
-          echo "✅ NEWSDATA_API_KEY presente."
+
+      - name: Smoke test Newsdata
+        env:
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY || secrets.NEWSDATA_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os, requests
+          k=os.environ["NEWS_API_KEY"]
+          u="https://newsdata.io/api/1/news"
+          p={"apikey":k,"q":"ai","language":"en","page":1}
+          r=requests.get(u, params=p, timeout=25)
+          print("URL:", r.url)
+          r.raise_for_status()
+          j=r.json()
+          results=j.get("results") or []
+          print("Results:", len(results))
+          if results:
+              print("First title:", (results[0].get("title") or "")[:120])
+          PY
 
       - name: Run updater
         env:
-          NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY || secrets.NEWSDATA_API_KEY }}
         run: |
           python scripts/update_posts.py
+          echo "------ ls _posts ------"
+          ls -la _posts || true
+          echo "------ git status ------"
+          git status --porcelain
 
-      - name: Commit & push changes
+      - name: Commit & push
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then
-            echo "No changes."
+            echo "No changes to commit."
           else
             git commit -m "auto: daily AI posts"
             git push
