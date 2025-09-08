@@ -1,0 +1,33 @@
+name: Debug Newsdata
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}   # <- usa o teu secret
+    steps:
+      - name: Check key presence
+        run: |
+          if [ -z "${NEWS_API_KEY}" ]; then
+            echo "❌ NEWS_API_KEY vazio (Settings → Secrets and variables → Actions)."
+            exit 1
+          else
+            echo "✅ NEWS_API_KEY presente (valor mascarado)."
+          fi
+
+      - name: Raw curl (minimal)
+        run: |
+          set -e
+          URL="https://newsdata.io/api/1/news?apikey=${NEWS_API_KEY}&q=ai&language=en&page=1"
+          echo "GET (masked): ${URL:0:45}********"
+          # mostra HTTP code e 400 primeiros chars do body
+          CODE=$(curl -s -w "\n%{http_code}" "$URL")
+          BODY=$(echo "$CODE" | head -n1)
+          HTTP=$(echo "$CODE" | tail -n1)
+          echo "HTTP: $HTTP"
+          echo "BODY preview:"
+          echo "$BODY" | head -c 400; echo
+          [ "$HTTP" = "200" ] || exit 1
