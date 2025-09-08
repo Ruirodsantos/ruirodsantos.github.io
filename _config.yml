@@ -1,0 +1,13 @@
+title: AI Discovery Blog
+description: Discover the latest tools, breakthroughs, and trends in Artificial Intelligence
+url: https://ruirodsantos.github.io
+permalink: /ai/news/:year/:month/:day/:title.html
+timezone: UTC
+markdown: kramdown
+kramdown:
+  input: GFM
+exclude:
+  - scripts
+  - .github
+  - README.md
+plugins: []
