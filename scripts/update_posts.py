@@ -2,22 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """
-Auto-updater para AI Discovery Blog (Newsdata.io).
+Auto-updater for AI Discovery Blog.
 
-- Busca artigos de IA (q=ai) em EN
-- Evita usar "category" com "q" (causa HTTP 422 no Newsdata)
-- Faz download de imagem do artigo (cache em assets/cache) quando possível
-- Se falhar, usa heróis por tópico ou rotação de genéricos
-- Escreve .md em _posts/ com front matter seguro
-
-Requisitos:
-  pip install requests python-slugify
-Ambiente:
-  NEWS_API_KEY (ou NEWSDATA_API_KEY)
+- Vai à Newsdata e busca artigos de IA
+- Guarda imagem do próprio artigo (em assets/cache)
+- Se falhar, usa heróis por tópico
+- Se falhar, roda genéricos
+- Último fallback: /assets/ai-hero.svg
+- Escreve posts .md em _posts/
 """
 
 from __future__ import annotations
-
 import os
 import re
 import sys
@@ -30,17 +25,19 @@ from slugify import slugify
 
 # ---------------- Config ----------------
 API_URL = "https://newsdata.io/api/1/news"
-API_KEY = os.getenv("NEWS_API_KEY") or os.getenv("NEWSDATA_API_KEY")
+API_KEY = os.getenv("NEWS_API_KEY")
+
+KEYWORDS = ["ai", "artificial intelligence", "machine learning",
+            "openai", "anthropic", "meta ai", "google ai"]
 
 LANG = "en"
-QUERY = "ai"            # Só q=ai (NÃO usar category junto para evitar 422)
-MAX_POSTS = 10          # quantos posts criar por execução (ajusta à vontade)
+MAX_POSTS = 10
 
 POSTS_DIR = "_posts"
 ASSET_CACHE_DIR = "assets/cache"
-
-# Fallbacks de imagem
 GENERIC_FALLBACK = "/assets/ai-hero.svg"
+USER_AGENT = "ai-discovery-bot/2.0 (+github actions)"
+
 TOPIC_HEROES = {
     "policy":   "/assets/topic-policy.svg",
     "chips":    "/assets/topic-chips.svg",
@@ -49,6 +46,7 @@ TOPIC_HEROES = {
     "health":   "/assets/topic-health.svg",
     "edu":      "/assets/topic-edu.svg",
 }
+
 ROTATE_CANDIDATES = [
     "/assets/ai-hero-1.svg",
     "/assets/ai-hero-2.svg",
@@ -58,7 +56,6 @@ ROTATE_CANDIDATES = [
 ]
 
 IMG_EXT_WHITELIST = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}
-USER_AGENT = "ai-discovery-bot/2.0 (+github actions)"
 
 
 # ---------------- Utils ----------------
@@ -66,21 +63,10 @@ def debug(msg: str) -> None:
     print(msg, flush=True)
 
 
-def clean(s: Optional[str]) -> str:
+def clean_text(s: Optional[str]) -> str:
     if not s:
         return ""
     return re.sub(r"\s+", " ", str(s)).strip()
-
-
-def shorten(s: str, max_len: int = 280) -> str:
-    s = clean(s)
-    if len(s) <= max_len:
-        return s
-    return s[: max_len - 1].rstrip() + "…"
-
-
-def yml(s: str) -> str:
-    return clean(s).replace('"', r'\"')
 
 
 def ensure_dir(path: str) -> None:
@@ -88,17 +74,31 @@ def ensure_dir(path: str) -> None:
         os.makedirs(path, exist_ok=True)
 
 
+def yml_escape(s: str) -> str:
+    return clean_text(s).replace('"', r'\"')
+
+
+def shorten(s: str, max_len: int = 280) -> str:
+    s = clean_text(s)
+    if len(s) <= max_len:
+        return s
+    return s[: max_len - 1].rstrip() + "…"
+
+
 # ---------------- API ----------------
-def call_api(page: int) -> Dict[str, Any]:
+def call_api(page: Optional[int] = None) -> Dict[str, Any]:
+    if not API_KEY:
+        raise ValueError("❌ NEWS_API_KEY not set (GitHub Secrets).")
+
     params = {
         "apikey": API_KEY,
-        "q": QUERY,          # <<< só query
+        "q": "ai OR \"artificial intelligence\" OR \"machine learning\"",
         "language": LANG,
-        "page": page,
+        "page": page or 1
     }
     headers = {"User-Agent": USER_AGENT}
-    debug(f"🔎 GET {API_URL} params={params}")
-    r = requests.get(API_URL, params=params, headers=headers, timeout=25)
+    r = requests.get(API_URL, params=params, headers=headers, timeout=20)
+    debug(f"🌐 GET {r.url}")
     r.raise_for_status()
     return r.json()
 
@@ -115,7 +115,7 @@ def guess_ext_from_ct(ct: str) -> str:
 
 def download_and_cache_image(url: str, title: str) -> Optional[str]:
     try:
-        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=25, stream=True)
+        resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=20, stream=True)
         resp.raise_for_status()
         ct = (resp.headers.get("Content-Type") or "").lower()
         if "image" not in ct:
@@ -163,69 +163,55 @@ def pick_rotating_hero(title: str) -> str:
 
 
 def pick_image(item: Dict[str, Any], title: str, desc: str) -> str:
-    # 1) tenta imagem original
     for k in ("image_url", "image"):
-        url = clean(item.get(k))
+        url = clean_text(item.get(k))
         if url and url.startswith(("http://", "https://")):
             local = download_and_cache_image(url, title)
             if local:
                 return local
 
-    # 2) herói por tópico
     topic = detect_topic(title, desc)
     if topic:
         candidate = TOPIC_HEROES.get(topic)
         if candidate and os.path.exists(candidate.lstrip("/")):
             return candidate
 
-    # 3) rotação de genéricos
     return pick_rotating_hero(title)
 
 
-# ---------------- Fetch & build ----------------
+# ---------------- Posts ----------------
 def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
-    if not API_KEY:
-        raise ValueError("NEWS_API_KEY (ou NEWSDATA_API_KEY) não definido.")
-
-    debug("🧠 Fetching AI articles...")
-    posts: List[Dict[str, Any]] = []
+    debug("📰 Fetching articles...")
+    collected: List[Dict[str, Any]] = []
     page = 1
 
-    while len(posts) < limit and page <= 5:
+    while len(collected) < limit and page <= 3:
         try:
             data = call_api(page)
-        except requests.HTTPError as e:
-            debug(f"❌ HTTP error: {e}")
-            break
         except Exception as e:
-            debug(f"❌ API error: {e}")
+            debug(f"❌ API error (page {page}): {e}")
             break
 
         results = data.get("results") or []
         if not results:
             break
 
-        for it in results:
-            if len(posts) >= limit:
+        for item in results:
+            if len(collected) >= limit:
                 break
 
-            title = clean(it.get("title"))
-            desc = clean(it.get("description"))
-            link = clean(it.get("link")) or clean(it.get("url"))
-            source_id = clean(it.get("source_id") or it.get("source") or "source")
-            pubdate = clean(it.get("pubDate") or it.get("published_at") or "")
+            title = clean_text(item.get("title"))
+            desc = clean_text(item.get("description"))
+            link = clean_text(item.get("link"))
+            source_id = clean_text(item.get("source_id") or item.get("source") or "source")
+            pubdate = clean_text(item.get("pubDate") or item.get("published_at") or "")
 
             if not title or not link:
                 continue
 
-            # filtro simples para garantir IA
-            if " ai " not in f" {title.lower()} " and " artificial intelligence" not in title.lower():
-                # se a API devolver algo off-topic, salta
-                pass  # mantemos porque já usamos q=ai; remove este pass se quiseres filtrar mais
+            image_path = pick_image(item, title, desc)
 
-            image_path = pick_image(it, title, desc)
-
-            posts.append({
+            collected.append({
                 "title": title,
                 "description": desc,
                 "link": link,
@@ -236,15 +222,15 @@ def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
 
         page += 1
 
-    return posts[:limit]
+    return collected[:limit]
 
 
 def build_markdown(article: Dict[str, Any]) -> str:
-    safe_title = yml(article["title"])
-    safe_excerpt = yml(article.get("description") or "")
+    safe_title = yml_escape(article["title"])
+    safe_excerpt = yml_escape(article.get("description") or "")
     image = article.get("image") or GENERIC_FALLBACK
-    source = yml(article.get("source_id") or "source")
-    source_url = yml(article.get("link") or "")
+    source = yml_escape(article.get("source_id") or "source")
+    source_url = yml_escape(article.get("link") or "")
 
     fm = [
         "---",
@@ -259,24 +245,19 @@ def build_markdown(article: Dict[str, Any]) -> str:
         "---",
     ]
     body = article.get("description") or ""
-    if body:
-        body += "\n\n"
-    body += f"> Source: [{source}]({source_url})\n"
-    return "\n".join(fm) + "\n\n" + body
+    return "\n".join(fm) + "\n\n" + body + "\n"
 
 
-def make_filename(title: str, date_str: Optional[str] = None) -> str:
+def make_filename(title: str, link: Optional[str] = None, date_str: Optional[str] = None) -> str:
     date_part = (date_str or datetime.now(timezone.utc).date().isoformat())[:10]
-    slug = slugify(title)[:80] or "post"
-    return os.path.join(POSTS_DIR, f"{date_part}-{slug}.md")
+    base = slugify(title)[:60] or "post"
+    suffix = hashlib.sha1((link or title).encode("utf-8")).hexdigest()[:6]
+    return os.path.join(POSTS_DIR, f"{date_part}-{base}-{suffix}.md")
 
 
 def write_post(article: Dict[str, Any]) -> Optional[str]:
     ensure_dir(POSTS_DIR)
-    path = make_filename(article["title"], article.get("pubDate"))
-    if os.path.exists(path):
-        debug(f"↩︎ Skip (exists): {os.path.basename(path)}")
-        return None
+    path = make_filename(article["title"], link=article.get("link"), date_str=article.get("pubDate"))
     with open(path, "w", encoding="utf-8") as f:
         f.write(build_markdown(article))
     debug(f"✅ Wrote: {path}")
@@ -287,11 +268,7 @@ def write_post(article: Dict[str, Any]) -> Optional[str]:
 def main():
     try:
         ensure_dir(ASSET_CACHE_DIR)
-        # garante que a pasta entra no repo
-        gitkeep = os.path.join(ASSET_CACHE_DIR, ".gitkeep")
-        if not os.path.exists(gitkeep):
-            with open(gitkeep, "w", encoding="utf-8") as gk:
-                gk.write("")
+        ensure_dir(POSTS_DIR)
 
         articles = fetch_articles()
         created = 0
@@ -299,10 +276,7 @@ def main():
             if write_post(art):
                 created += 1
 
-        if created == 0:
-            debug("ℹ️ Nothing new.")
-        else:
-            debug(f"🎉 Done. {created} new post(s).")
+        debug(f"🎉 Done. {created} new post(s).")
     except Exception as e:
         debug(f"❌ Error: {e}")
         sys.exit(1)
