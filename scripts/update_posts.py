@@ -2,34 +2,47 @@
 # -*- coding: utf-8 -*-
 
 """
-AI Discovery Blog — Auto updater (Newsdata.io)
+Auto-updater para o AI Discovery Blog.
 
-- Busca notícias categoria "technology" em inglês
-- Filtra localmente só AI (palavras-chave)
-- Gera posts Jekyll em _posts/
-- Trata imagens (download/cache -> heróis por tópico -> rotação -> fallback)
+- Vai à Newsdata (plano free) usando apenas language=en (sem category/country) para evitar 422.
+- Filtra localmente para temas de IA (keywords).
+- Usa imagem do próprio artigo (download/cache em assets/cache) quando possível.
+- Se falhar, usa heróis por tópico (policy, chips, markets, research, health, edu).
+- Se falhar, roda heróis genéricos (ai-hero-1..5.svg) existentes no repo.
+- Último fallback: /assets/ai-hero.svg
+- Escreve .md em _posts/ com front-matter seguro.
+
+Requer:
+  pip install requests python-slugify
+Env:
+  NEWS_API_KEY
 """
 
-import os, re, sys, hashlib, requests
+from __future__ import annotations
+
+import os
+import re
+import sys
+import hashlib
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
+import requests
 from slugify import slugify
 
 # ---------------- Config ----------------
 API_URL = "https://newsdata.io/api/1/news"
 API_KEY = os.getenv("NEWS_API_KEY")
 
-KEYWORDS = ["ai", "artificial intelligence", "machine learning", "openai", "anthropic", "google ai", "meta ai"]
 LANG = "en"
-CATEGORY = "technology"
-MAX_POSTS = 10
+MAX_POSTS = 10  # quantos posts criar numa execução
 
 POSTS_DIR = "_posts"
 ASSET_CACHE_DIR = "assets/cache"
 GENERIC_FALLBACK = "/assets/ai-hero.svg"
-USER_AGENT = "ai-discovery-bot/1.5 (+github actions)"
+USER_AGENT = "ai-discovery-bot/1.4 (+github actions)"
 
+# heróis por tópico (certifica que estes ficheiros existem no repo antes de usar)
 TOPIC_HEROES = {
     "policy":   "/assets/topic-policy.svg",
     "chips":    "/assets/topic-chips.svg",
@@ -38,6 +51,8 @@ TOPIC_HEROES = {
     "health":   "/assets/topic-health.svg",
     "edu":      "/assets/topic-edu.svg",
 }
+
+# rotação de genéricos (certifica que existam; senão cai no GENERIC_FALLBACK)
 ROTATE_CANDIDATES = [
     "/assets/ai-hero-1.svg",
     "/assets/ai-hero-2.svg",
@@ -45,7 +60,18 @@ ROTATE_CANDIDATES = [
     "/assets/ai-hero-4.svg",
     "/assets/ai-hero-5.svg",
 ]
+
 IMG_EXT_WHITELIST = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}
+
+# Palavras-chave para considerar “AI-related”
+AI_KEYWORDS = [
+    "ai", "artificial intelligence", "machine learning", "ml", "deep learning",
+    "generative", "genai", "llm", "large language model", "transformer",
+    "openai", "chatgpt", "gpt-4", "gpt-5", "anthropic", "claude", "google ai",
+    "deepmind", "gemini", "meta ai", "luma", "stability ai", "mistral",
+    "copilot", "hugging face", "fine-tuning", "inference", "vector db",
+    "prompt", "rag", "retrieval augmented", "rlhf"
+]
 
 # ---------------- Utils ----------------
 def debug(msg: str) -> None:
@@ -61,6 +87,7 @@ def ensure_dir(path: str) -> None:
         os.makedirs(path, exist_ok=True)
 
 def yml_escape(s: str) -> str:
+    """Escapa aspas para YAML simples no front-matter."""
     return clean_text(s).replace('"', r'\"')
 
 def shorten(s: str, max_len: int = 280) -> str:
@@ -69,17 +96,25 @@ def shorten(s: str, max_len: int = 280) -> str:
         return s
     return s[: max_len - 1].rstrip() + "…"
 
+def is_ai_related(title: str, desc: str) -> bool:
+    blob = f"{title} {desc}".lower()
+    return any(k in blob for k in AI_KEYWORDS)
+
 # ---------------- API ----------------
 def call_api(page: int = 1) -> Dict[str, Any]:
-    params = {"apikey": API_KEY, "language": LANG, "category": CATEGORY, "page": page}
+    """
+    Newsdata (free): usar apenas language=en + paginação.
+    Nada de category/country -> evita 422.
+    """
+    params = {
+        "apikey": API_KEY,
+        "language": LANG,
+        "page": page,
+    }
     headers = {"User-Agent": USER_AGENT}
     r = requests.get(API_URL, params=params, headers=headers, timeout=20)
     r.raise_for_status()
     return r.json()
-
-def is_ai_related(title: str, desc: str) -> bool:
-    text = f"{title} {desc}".lower()
-    return any(kw in text for kw in KEYWORDS)
 
 # ---------------- Image helpers ----------------
 def guess_ext_from_ct(ct: str) -> str:
@@ -97,18 +132,25 @@ def download_and_cache_image(url: str, title: str) -> Optional[str]:
         ct = (resp.headers.get("Content-Type") or "").lower()
         if "image" not in ct:
             return None
-        name = os.path.basename(urlparse(url).path) or slugify(title)
-        base, ext = os.path.splitext(name)
+
+        # nome e extensão
+        path_name = os.path.basename(urlparse(url).path) or slugify(title)
+        base, ext = os.path.splitext(path_name)
         if ext.lower() not in IMG_EXT_WHITELIST:
             ext = guess_ext_from_ct(ct)
+
+        # filename único e seguro
         h = hashlib.sha1(url.encode("utf-8")).hexdigest()[:8]
         filename = f"{slugify(base) or 'img'}-{h}{ext}"
+
         ensure_dir(ASSET_CACHE_DIR)
         abs_path = os.path.join(ASSET_CACHE_DIR, filename)
+
         with open(abs_path, "wb") as f:
             for chunk in resp.iter_content(65536):
                 if chunk:
                     f.write(chunk)
+
         return f"/{ASSET_CACHE_DIR}/{filename}"
     except Exception as e:
         debug(f"img download fail: {e}")
@@ -116,12 +158,12 @@ def download_and_cache_image(url: str, title: str) -> Optional[str]:
 
 def detect_topic(title: str, desc: str) -> Optional[str]:
     t = f"{title} {desc}".lower()
-    if "policy" in t or "regulation" in t: return "policy"
-    if "gpu" in t or "chip" in t: return "chips"
-    if "stock" in t or "market" in t: return "markets"
-    if "research" in t or "paper" in t: return "research"
-    if "health" in t or "medical" in t: return "health"
-    if "education" in t or "school" in t: return "edu"
+    if any(k in t for k in ["policy", "regulation", "law", "ban"]): return "policy"
+    if any(k in t for k in ["gpu", "chip", "nvidia", "amd", "hardware"]): return "chips"
+    if any(k in t for k in ["stock", "market", "shares", "revenue", "valuation"]): return "markets"
+    if any(k in t for k in ["research", "paper", "breakthrough", "study"]): return "research"
+    if any(k in t for k in ["health", "medical", "doctor", "clinical"]): return "health"
+    if any(k in t for k in ["education", "school", "classroom", "student"]): return "edu"
     return None
 
 def pick_rotating_hero(title: str) -> str:
@@ -132,17 +174,22 @@ def pick_rotating_hero(title: str) -> str:
     return existing[idx]
 
 def pick_image(item: Dict[str, Any], title: str, desc: str) -> str:
+    # 1) imagem do artigo
     for k in ("image_url", "image"):
         url = clean_text(item.get(k))
         if url and url.startswith(("http://", "https://")):
             local = download_and_cache_image(url, title)
             if local:
                 return local
+
+    # 2) herói por tópico
     topic = detect_topic(title, desc)
     if topic:
-        cand = TOPIC_HEROES.get(topic)
-        if cand and os.path.exists(cand.lstrip("/")):
-            return cand
+        candidate = TOPIC_HEROES.get(topic)
+        if candidate and os.path.exists(candidate.lstrip("/")):
+            return candidate
+
+    # 3) rotação de genéricos
     return pick_rotating_hero(title)
 
 # ---------------- Posts ----------------
@@ -150,12 +197,18 @@ def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
     if not API_KEY:
         raise ValueError("NEWS_API_KEY not set.")
 
-    debug("📰 Fetching articles (category=technology)...")
+    debug("📰 Fetching articles (language=en)...")
     collected: List[Dict[str, Any]] = []
     page = 1
 
-    while len(collected) < limit and page <= 5:
-        data = call_api(page=page)
+    # Puxa algumas páginas e filtra localmente
+    while len(collected) < limit and page <= 6:
+        try:
+            data = call_api(page=page)
+        except Exception as e:
+            debug(f"API error (page {page}): {e}")
+            break
+
         results = data.get("results") or []
         if not results:
             break
@@ -163,16 +216,20 @@ def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
         for item in results:
             if len(collected) >= limit:
                 break
+
             title = clean_text(item.get("title"))
             desc = clean_text(item.get("description") or item.get("summary"))
             link = clean_text(item.get("link") or item.get("url"))
             source_id = clean_text(item.get("source_id") or item.get("source") or "source")
             pubdate = clean_text(item.get("pubDate") or item.get("published_at") or "")
+
             if not title or not link:
                 continue
             if not is_ai_related(title, desc):
                 continue
+
             image_path = pick_image(item, title, desc)
+
             collected.append({
                 "title": title,
                 "description": desc,
@@ -181,6 +238,7 @@ def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
                 "image": image_path,
                 "pubDate": pubdate or datetime.now(timezone.utc).isoformat(),
             })
+
         page += 1
 
     return collected[:limit]
@@ -191,6 +249,7 @@ def build_markdown(article: Dict[str, Any]) -> str:
     image = article.get("image") or GENERIC_FALLBACK
     source = yml_escape(article.get("source_id") or "source")
     source_url = yml_escape(article.get("link") or "")
+
     fm = [
         "---",
         "layout: post",
@@ -203,6 +262,8 @@ def build_markdown(article: Dict[str, Any]) -> str:
         f'source_url: "{source_url}"',
         "---",
     ]
+
+    # Corpo simples (o fluxo já cria um resumo na home; aqui mantemos curto)
     body = article.get("description") or ""
     return "\n".join(fm) + "\n\n" + body + "\n"
 
@@ -226,16 +287,18 @@ def write_post(article: Dict[str, Any]) -> Optional[str]:
 def main():
     try:
         ensure_dir(ASSET_CACHE_DIR)
-        if not os.path.exists(os.path.join(ASSET_CACHE_DIR, ".gitkeep")):
-            open(os.path.join(ASSET_CACHE_DIR, ".gitkeep"), "w").close()
+        # garante que a pasta vai para o repo mesmo vazia
+        gitkeep = os.path.join(ASSET_CACHE_DIR, ".gitkeep")
+        if not os.path.exists(gitkeep):
+            with open(gitkeep, "w", encoding="utf-8") as gk:
+                gk.write("")
+
         articles = fetch_articles()
-        if not articles:
-            debug("ℹ️ No AI articles found.")
-            return
         created = 0
         for art in articles:
             if write_post(art):
                 created += 1
+
         debug(f"🎉 Done. {created} new post(s).")
     except Exception as e:
         debug(f"❌ Error: {e}")
