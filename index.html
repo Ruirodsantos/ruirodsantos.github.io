@@ -1,0 +1,31 @@
+---
+layout: default
+title: AI Discovery Blog
+---
+
+<section class="hero">
+  <div class="hero-grid">
+    <div>
+      <h2>Stay ahead in AI — daily.</h2>
+      <p>Curated highlights from the world of Artificial Intelligence: product launches, research breakthroughs, real-world use cases. Each post includes a summary so you can skim or dive deeper.</p>
+      <p><em>Tip:</em> Click any headline to read the summary and source link.</p>
+    </div>
+    <div>
+      <img src="{{ '/assets/ai-hero.svg' | relative_url }}" alt="AI Discovery" class="hero-img">
+    </div>
+  </div>
+</section>
+
+<ul class="post-list">
+  {% for post in site.posts %}
+    <li class="post-item">
+      {% if post.image %}
+        <a href="{{ post.url | relative_url }}"><img class="post-thumbnail" src="{{ post.image }}" alt=""></a>
+      {% endif %}
+      <h2><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h2>
+      <div class="post-meta">{{ post.date | date: "%B %d, %Y" }}</div>
+      {% if post.excerpt %}<p class="post-excerpt">{{ post.excerpt }}</p>{% endif %}
+      <a href="{{ post.url | relative_url }}">Read more →</a>
+    </li>
+  {% endfor %}
+</ul>
