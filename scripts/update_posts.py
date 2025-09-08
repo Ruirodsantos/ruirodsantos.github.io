@@ -4,45 +4,32 @@
 """
 AI Discovery Blog — Auto updater (Newsdata.io)
 
-- Busca notícias de IA via Newsdata
-- Tolerante a 422/400: tenta queries cada vez mais simples
+- Busca notícias categoria "technology" em inglês
+- Filtra localmente só AI (palavras-chave)
 - Gera posts Jekyll em _posts/
-- Trata imagens: download/cache -> heróis por tópico -> rotação -> fallback
-
-Requisitos:
-  pip install requests python-slugify
-
-ENV:
-  NEWS_API_KEY   (colocado em Settings → Secrets and variables → Actions)
+- Trata imagens (download/cache -> heróis por tópico -> rotação -> fallback)
 """
 
-from __future__ import annotations
-
-import os
-import re
-import sys
-import hashlib
+import os, re, sys, hashlib, requests
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
-import requests
 from slugify import slugify
 
 # ---------------- Config ----------------
 API_URL = "https://newsdata.io/api/1/news"
 API_KEY = os.getenv("NEWS_API_KEY")
 
-# palavras-chave curtas (para não estourar limite)
 KEYWORDS = ["ai", "artificial intelligence", "machine learning", "openai", "anthropic", "google ai", "meta ai"]
 LANG = "en"
+CATEGORY = "technology"
 MAX_POSTS = 10
 
 POSTS_DIR = "_posts"
 ASSET_CACHE_DIR = "assets/cache"
-USER_AGENT = "ai-discovery-bot/1.4 (+github actions)"
-
-# imagens
 GENERIC_FALLBACK = "/assets/ai-hero.svg"
+USER_AGENT = "ai-discovery-bot/1.5 (+github actions)"
+
 TOPIC_HEROES = {
     "policy":   "/assets/topic-policy.svg",
     "chips":    "/assets/topic-chips.svg",
@@ -82,60 +69,17 @@ def shorten(s: str, max_len: int = 280) -> str:
         return s
     return s[: max_len - 1].rstrip() + "…"
 
-# ---------------- API helpers ----------------
-def build_query_rich() -> str:
-    # versão “rica”, ainda curta
-    parts = ['"artificial intelligence"', "ai", '"machine learning"', "openai", "anthropic", '"google ai"', '"meta ai"']
-    q = " OR ".join(parts)
-    # Newsdata tem limite ~100 chars; garantir abaixo disso
-    if len(q) > 95:
-        q = '"artificial intelligence" OR ai OR "machine learning"'
-    return q
-
-def build_query_simple() -> str:
-    return '"artificial intelligence" OR ai OR "machine learning"'
-
-def call_api_with_fallbacks(page: int = 1) -> Dict[str, Any]:
-    """
-    Tenta variantes de parâmetros até uma funcionar.
-    Ordem:
-      1) q=rico + language=en + category=technology
-      2) q=rico + language=en
-      3) q=ai + language=en
-    """
+# ---------------- API ----------------
+def call_api(page: int = 1) -> Dict[str, Any]:
+    params = {"apikey": API_KEY, "language": LANG, "category": CATEGORY, "page": page}
     headers = {"User-Agent": USER_AGENT}
-    variants: List[Dict[str, Any]] = [
-        {"q": build_query_rich(), "language": LANG, "category": "technology", "page": page},
-        {"q": build_query_rich(), "language": LANG, "page": page},
-        {"q": "ai", "language": LANG, "page": page},
-    ]
+    r = requests.get(API_URL, params=params, headers=headers, timeout=20)
+    r.raise_for_status()
+    return r.json()
 
-    last_err: Optional[Exception] = None
-    for i, params in enumerate(variants, start=1):
-        # remove None/False
-        params = {k: v for k, v in params.items() if v}
-        try:
-            r = requests.get(API_URL, params={"apikey": API_KEY, **params}, headers=headers, timeout=20)
-            # se 422/400, tentar próximo
-            if r.status_code in (400, 422):
-                debug(f"⚠️  API {r.status_code} com variante {i}: {r.url}")
-                last_err = requests.HTTPError(f"{r.status_code} for {r.url}")
-                continue
-            r.raise_for_status()
-            return r.json()
-        except requests.HTTPError as e:
-            last_err = e
-            debug(f"⚠️  HTTPError com variante {i}: {e}")
-            continue
-        except Exception as e:
-            last_err = e
-            debug(f"⚠️  Erro com variante {i}: {e}")
-            continue
-
-    # se todas falharem:
-    if last_err:
-        raise last_err
-    raise RuntimeError("API call failed for all variants")
+def is_ai_related(title: str, desc: str) -> bool:
+    text = f"{title} {desc}".lower()
+    return any(kw in text for kw in KEYWORDS)
 
 # ---------------- Image helpers ----------------
 def guess_ext_from_ct(ct: str) -> str:
@@ -153,22 +97,18 @@ def download_and_cache_image(url: str, title: str) -> Optional[str]:
         ct = (resp.headers.get("Content-Type") or "").lower()
         if "image" not in ct:
             return None
-
         name = os.path.basename(urlparse(url).path) or slugify(title)
         base, ext = os.path.splitext(name)
         if ext.lower() not in IMG_EXT_WHITELIST:
             ext = guess_ext_from_ct(ct)
-
         h = hashlib.sha1(url.encode("utf-8")).hexdigest()[:8]
         filename = f"{slugify(base) or 'img'}-{h}{ext}"
         ensure_dir(ASSET_CACHE_DIR)
         abs_path = os.path.join(ASSET_CACHE_DIR, filename)
-
         with open(abs_path, "wb") as f:
             for chunk in resp.iter_content(65536):
                 if chunk:
                     f.write(chunk)
-
         return f"/{ASSET_CACHE_DIR}/{filename}"
     except Exception as e:
         debug(f"img download fail: {e}")
@@ -176,12 +116,12 @@ def download_and_cache_image(url: str, title: str) -> Optional[str]:
 
 def detect_topic(title: str, desc: str) -> Optional[str]:
     t = f"{title} {desc}".lower()
-    if any(k in t for k in ["policy", "regulation", "law", "ban"]): return "policy"
-    if any(k in t for k in ["gpu", "chip", "nvidia", "amd", "hardware"]): return "chips"
-    if any(k in t for k in ["stock", "market", "shares", "revenue", "valuation"]): return "markets"
-    if any(k in t for k in ["research", "paper", "breakthrough", "study"]): return "research"
-    if any(k in t for k in ["health", "medical", "doctor", "clinical"]): return "health"
-    if any(k in t for k in ["education", "school", "classroom", "student"]): return "edu"
+    if "policy" in t or "regulation" in t: return "policy"
+    if "gpu" in t or "chip" in t: return "chips"
+    if "stock" in t or "market" in t: return "markets"
+    if "research" in t or "paper" in t: return "research"
+    if "health" in t or "medical" in t: return "health"
+    if "education" in t or "school" in t: return "edu"
     return None
 
 def pick_rotating_hero(title: str) -> str:
@@ -205,34 +145,33 @@ def pick_image(item: Dict[str, Any], title: str, desc: str) -> str:
             return cand
     return pick_rotating_hero(title)
 
-# ---------------- Fetch & build posts ----------------
+# ---------------- Posts ----------------
 def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
     if not API_KEY:
         raise ValueError("NEWS_API_KEY not set.")
 
-    debug("📰 Fetching articles...")
+    debug("📰 Fetching articles (category=technology)...")
     collected: List[Dict[str, Any]] = []
     page = 1
 
-    while len(collected) < limit and page <= 3:
-        data = call_api_with_fallbacks(page=page)
-        results = data.get("results") or data.get("articles") or []
+    while len(collected) < limit and page <= 5:
+        data = call_api(page=page)
+        results = data.get("results") or []
         if not results:
             break
 
         for item in results:
             if len(collected) >= limit:
                 break
-
             title = clean_text(item.get("title"))
             desc = clean_text(item.get("description") or item.get("summary"))
             link = clean_text(item.get("link") or item.get("url"))
             source_id = clean_text(item.get("source_id") or item.get("source") or "source")
             pubdate = clean_text(item.get("pubDate") or item.get("published_at") or "")
-
             if not title or not link:
                 continue
-
+            if not is_ai_related(title, desc):
+                continue
             image_path = pick_image(item, title, desc)
             collected.append({
                 "title": title,
@@ -242,7 +181,6 @@ def fetch_articles(limit: int = MAX_POSTS) -> List[Dict[str, Any]]:
                 "image": image_path,
                 "pubDate": pubdate or datetime.now(timezone.utc).isoformat(),
             })
-
         page += 1
 
     return collected[:limit]
@@ -253,7 +191,6 @@ def build_markdown(article: Dict[str, Any]) -> str:
     image = article.get("image") or GENERIC_FALLBACK
     source = yml_escape(article.get("source_id") or "source")
     source_url = yml_escape(article.get("link") or "")
-
     fm = [
         "---",
         "layout: post",
@@ -266,7 +203,6 @@ def build_markdown(article: Dict[str, Any]) -> str:
         f'source_url: "{source_url}"',
         "---",
     ]
-    # conteúdo simples; se quiser, dá para enriquecer depois
     body = article.get("description") or ""
     return "\n".join(fm) + "\n\n" + body + "\n"
 
@@ -292,17 +228,14 @@ def main():
         ensure_dir(ASSET_CACHE_DIR)
         if not os.path.exists(os.path.join(ASSET_CACHE_DIR, ".gitkeep")):
             open(os.path.join(ASSET_CACHE_DIR, ".gitkeep"), "w").close()
-
         articles = fetch_articles()
         if not articles:
-            debug("ℹ️ No articles found.")
+            debug("ℹ️ No AI articles found.")
             return
-
         created = 0
         for art in articles:
             if write_post(art):
                 created += 1
-
         debug(f"🎉 Done. {created} new post(s).")
     except Exception as e:
         debug(f"❌ Error: {e}")
