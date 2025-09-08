@@ -1,0 +1,7 @@
+name: Debug
+on: workflow_dispatch
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Hello from GitHub Actions. Branch=${{ github.ref }} Repo=${{ github.repository }}"
