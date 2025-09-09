@@ -11,7 +11,7 @@ Minimal stable updater for AI posts (Newsdata).
 from __future__ import annotations
 import os, re, sys, hashlib
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from urllib.parse import urlparse
 import requests
 from slugify import slugify
@@ -98,7 +98,7 @@ def pick_image(item: Dict[str, Any], title: str) -> str:
                 return local
     return rotate_hero(title)
 
-def call_api(page: int) -> Dict[str, Any]:
+def call_api(page: int) -> Tuple[Dict[str, Any], int, Dict[str, Any]]:
     # super simple query -> avoids 422 traps
     params = {
         "apikey": API_KEY,
@@ -110,8 +110,9 @@ def call_api(page: int) -> Dict[str, Any]:
     r = requests.get(API_URL, params=params, headers=headers, timeout=25)
     # Log the final URL for debugging
     dbg(f"GET {r.url}")
+    status = r.status_code
     r.raise_for_status()
-    return r.json()
+    return r.json(), status, params
 
 def fetch_articles(limit: int) -> List[Dict[str, Any]]:
     if not API_KEY:
@@ -120,9 +121,13 @@ def fetch_articles(limit: int) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     page = 1
     while len(out) < limit and page <= 3:
-        data = call_api(page)
+        data, status, params = call_api(page)
         results = data.get("results") or []
         if not results:
+            dbg(
+                f"⚠️ Empty results: HTTP {status}, params={params}, "
+                f"status={data.get('status')}, message={data.get('message')}, response={data}"
+            )
             break
         for it in results:
             if len(out) >= limit: break
