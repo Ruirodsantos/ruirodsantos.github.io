@@ -10,7 +10,7 @@ Minimal stable updater for AI posts (Newsdata).
 
 from __future__ import annotations
 import os, re, sys, hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse
 import requests
@@ -20,7 +20,7 @@ API_URL = "https://newsdata.io/api/1/news"
 API_KEY = os.getenv("NEWS_API_KEY")  # <- single source of truth
 
 LANG = "en"
-MAX_POSTS = 10          # 10 per run
+MAX_POSTS = 100         # 100 per run
 POSTS_DIR = "_posts"
 ASSET_CACHE_DIR = "assets/cache"
 GENERIC_FALLBACK = "/assets/ai-hero.svg"
@@ -174,6 +174,23 @@ def write_article(a: Dict[str, Any]) -> Optional[str]:
     dbg(f"✅ Wrote: {path}")
     return path
 
+def cleanup_old_posts(days: int = 30) -> None:
+    """Remove posts older than `days` days."""
+    if not os.path.isdir(POSTS_DIR):
+        return
+    cutoff = datetime.now(timezone.utc).date() - timedelta(days=days)
+    for name in os.listdir(POSTS_DIR):
+        if not name.endswith(".md"):
+            continue
+        date_part = "-".join(name.split("-", 3)[:3])
+        try:
+            file_date = datetime.strptime(date_part, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if file_date < cutoff:
+            os.remove(os.path.join(POSTS_DIR, name))
+            dbg(f"🗑 Removed old post: {name}")
+
 def main():
     try:
         ensure_dir(ASSET_CACHE_DIR)
@@ -188,6 +205,7 @@ def main():
             return
         created = sum(1 for a in arts if write_article(a))
         dbg(f"🎉 Done. Created {created} post(s).")
+        cleanup_old_posts()
     except requests.HTTPError as e:
         # show body to help debugging Newsdata errors
         try:
