@@ -43,6 +43,17 @@ def clean(s: Optional[str]) -> str:
     if not s: return ""
     return re.sub(r"\s+", " ", str(s)).strip()
 
+def strip_paid(s: Optional[str]) -> str:
+    """Remove Newsdata placeholders for paid content."""
+    s = clean(s)
+    if not s:
+        return ""
+    # Newsdata uses several phrases that all start with "ONLY AVAILABLE IN".
+    # A simple regex keeps the helper future-proof for any plan combination.
+    if re.search(r"only available in.+plans", s, re.I):
+        return ""
+    return s
+
 def ensure_dir(p: str) -> None:
     os.makedirs(p, exist_ok=True)
 
@@ -126,11 +137,11 @@ def fetch_articles(limit: int) -> List[Dict[str, Any]]:
             break
         for it in results:
             if len(out) >= limit: break
-            title = clean(it.get("title"))
+            title = strip_paid(it.get("title"))
             link  = clean(it.get("link") or it.get("url"))
             if not title or not link:
                 continue
-            desc  = clean(it.get("description") or it.get("content") or "")
+            desc  = strip_paid(it.get("description") or it.get("content") or "")
             src   = clean(it.get("source_id") or it.get("source") or "source")
             pub   = clean(it.get("pubDate") or it.get("published_at") or "")
             img   = pick_image(it, title)
