@@ -2,32 +2,307 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>{{ page.title | escape }}</title>
+  <title>{{ page.title | escape }} — AI, but make it useful</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="{{ '/assets/style.css' | relative_url }}">
-  <!-- AdSense (keep yours here if needed) -->
+  <meta name="description" content="AI explained simply. What it is, and how to make money from it." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black: #0a0a0a;
+      --white: #ffffff;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+      --gray-800: #1f2937;
+      --green: #10b981;
+      --radius: 12px;
+      --max-w: 780px;
+    }
+    html { font-size: 16px; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--white);
+      color: var(--black);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* NAV */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+    .nav-logo {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--black);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-logo .dot {
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .nav-tag {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      background: #eef2ff;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* HERO */
+    .hero {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 80px 24px 64px;
+    }
+    .hero-kicker {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -1.5px;
+      color: var(--black);
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+    .hero-sub {
+      font-size: 18px;
+      color: var(--gray-600);
+      max-width: 520px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+    .hero-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--gray-200);
+      color: var(--gray-600);
+    }
+    .badge.green { border-color: #d1fae5; color: #065f46; background: #f0fdf4; }
+    .badge.purple { border-color: #e0e7ff; color: #4338ca; background: #eef2ff; }
+
+    /* DIVIDER */
+    .divider {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 24px;
+      border-top: 1px solid var(--gray-200);
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      padding: 24px 0 20px;
+    }
+
+    /* POSTS */
+    .posts {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    .post-card {
+      display: block;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .post-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .post-card-inner {
+      display: grid;
+      grid-template-columns: 1fr 200px;
+      min-height: 140px;
+    }
+    .post-card-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .post-card-meta {
+      font-size: 12px;
+      color: var(--gray-400);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .post-card-title {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.35;
+      letter-spacing: -0.3px;
+      color: var(--black);
+      margin-bottom: 10px;
+    }
+    .post-card-excerpt {
+      font-size: 14px;
+      color: var(--gray-600);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .post-card-footer {
+      margin-top: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .post-card-img {
+      background: var(--gray-100);
+      overflow: hidden;
+    }
+    .post-card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--gray-400);
+    }
+    .empty-state .big { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    /* POST PAGE */
+    .post-page {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    .post-page-kicker {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .post-page h1 {
+      font-size: clamp(24px, 4vw, 38px);
+      font-weight: 700;
+      letter-spacing: -1px;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .post-page-meta {
+      font-size: 13px;
+      color: var(--gray-400);
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .post-page-body {
+      font-size: 17px;
+      line-height: 1.8;
+      color: var(--gray-800);
+    }
+    .post-page-body p { margin-bottom: 20px; }
+    .post-source {
+      margin-top: 40px;
+      padding: 16px 20px;
+      background: var(--gray-50);
+      border-radius: var(--radius);
+      border: 1px solid var(--gray-200);
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+    .post-source a { color: var(--accent); font-weight: 500; }
+
+    /* FOOTER */
+    .footer {
+      border-top: 1px solid var(--gray-200);
+      padding: 32px 24px;
+    }
+    .footer-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--gray-400);
+    }
+    .footer-logo { font-weight: 600; color: var(--black); }
+
+    @media (max-width: 600px) {
+      .post-card-inner { grid-template-columns: 1fr; }
+      .post-card-img { height: 160px; }
+      .hero h1 { letter-spacing: -0.5px; }
+    }
+  </style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="inner">
-      <h1 class="brand"><a href="{{ '/' | relative_url }}">🧠 AI Discovery Blog</a></h1>
-      <p class="tagline">Discover the latest tools, breakthroughs, and trends in Artificial Intelligence</p>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="dot"></span>
+        AI, but make it useful
+      </a>
+      <span class="nav-tag">Daily</span>
     </div>
-  </header>
+  </nav>
 
-  <main class="site-main">
-    <div class="inner">
-      {{ content }}
-    </div>
+  <main>
+    {{ content }}
   </main>
 
-  <footer class="site-footer">
-    <div class="inner footer-inner">
-      <p class="footer-copy">© {{ "now" | date: "%Y" }} AI Discovery Blog — All rights reserved</p>
-      <div class="social-icons">
-        <a class="social-icon earnapp" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">💰 Earn with me</a>
-      </div>
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-logo">AI, but make it useful</span>
+      <span>Updated daily · {{ "now" | date: "%Y" }}</span>
     </div>
   </footer>
 </body>
