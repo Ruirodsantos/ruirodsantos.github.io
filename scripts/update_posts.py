@@ -54,7 +54,10 @@ def ensure_dir(p):
 
 
 def yml(s):
-    return clean(s).replace('"', '\\"')
+    s = clean(s)
+    s = s.replace('"', '\\"')
+    s = s.replace("'", "")
+    return s
 
 
 def shorten(s, n=200):
