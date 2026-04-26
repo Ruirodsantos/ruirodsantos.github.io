@@ -1,22 +1,61 @@
 ---
 layout: default
 ---
-
-<article class="post-page">
+{% if page.image %}
+<div class="post-hero" style="background-image:url('{{ page.image }}')">
+  <div class="post-hero-overlay"></div>
+</div>
+{% endif %}
+<div class="post-page">
+  <a href="/" class="post-back">&#8592; Back to all stories</a>
+  <p class="post-page-cat">AI &amp; Technology</p>
   <h1>{{ page.title }}</h1>
-  <div class="post-meta">Published on: {{ page.date | date: "%B %d, %Y" }}</div>
-
-  {% if page.image %}
-    <img src="{{ page.image }}" alt="" class="post-image">
-  {% endif %}
-
-  <div class="post-content">
-    {{ content }}
+  <div class="post-page-meta">
+    <span>{{ page.date | date: "%B %d, %Y" }}</span>
+    {% if page.source_url %}<span>&middot;</span><a href="{{ page.source_url }}" target="_blank" rel="noopener" style="color:var(--accent)">Original source &#8594;</a>{% endif %}
   </div>
-
-  <p class="post-source">
-    Source: {% if page.source_url %}<a href="{{ page.source_url }}" target="_blank" rel="noopener">{{ page.source }}</a>{% else %}{{ page.source }}{% endif %}
-  </p>
-
-  <p><a href="{{ '/' | relative_url }}">← Back to blog</a></p>
-</article>
+  <div class="post-page-body">{{ content }}</div>
+</div>
+<div class="comments-section">
+  <h2 class="comments-title">Join the conversation</h2>
+  <div class="comment-form">
+    <input type="text" id="comment-name" placeholder="Your name" maxlength="50"/>
+    <textarea id="comment-text" placeholder="Share your thoughts..." maxlength="1000"></textarea>
+    <button class="comment-submit" onclick="submitComment()">Post comment</button>
+    <div class="comment-error" id="comment-error"></div>
+    <p class="comment-note">Be respectful. Offensive language will be blocked automatically.</p>
+  </div>
+  <div class="comments-list" id="comments-list">
+    <p style="color:var(--gray-400);font-size:14px">No comments yet. Be the first!</p>
+  </div>
+</div>
+<script>
+const BAD=["fuck","shit","bitch","asshole","bastard","cunt","dick","pussy","nigger","faggot","retard","whore","slut","cock","twat","wanker","prick","arse","bollocks","motherfucker"];
+const KEY="cmts_"+window.location.pathname.replace(/\//g,"_");
+function hasBad(t){const l=t.toLowerCase();return BAD.some(w=>new RegExp("\\b"+w+"\\b","i").test(l))}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function showErr(m){const e=document.getElementById("comment-error");e.textContent=m;e.style.display="block"}
+function loadComments(){
+  const s=JSON.parse(localStorage.getItem(KEY)||"[]");
+  const l=document.getElementById("comments-list");
+  if(!s.length){l.innerHTML='<p style="color:var(--gray-400);font-size:14px">No comments yet. Be the first!</p>';return}
+  l.innerHTML=s.map(c=>'<div class="comment-item"><div class="comment-author">'+esc(c.name)+'</div><div class="comment-text">'+esc(c.text)+'</div><div class="comment-date">'+c.date+'</div></div>').join("")
+}
+function submitComment(){
+  const name=document.getElementById("comment-name").value.trim();
+  const text=document.getElementById("comment-text").value.trim();
+  document.getElementById("comment-error").style.display="none";
+  if(!name||name.length<2){showErr("Please enter your name.");return}
+  if(!text||text.length<5){showErr("Comment is too short.");return}
+  if(hasBad(name)||hasBad(text)){showErr("Please keep it respectful — your comment contains inappropriate language.");return}
+  if(text.length>1000){showErr("Max 1000 characters.");return}
+  if(/<[a-z]/i.test(text)){showErr("No HTML allowed.");return}
+  const s=JSON.parse(localStorage.getItem(KEY)||"[]");
+  s.unshift({name,text,date:new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})});
+  localStorage.setItem(KEY,JSON.stringify(s.slice(0,50)));
+  document.getElementById("comment-name").value="";
+  document.getElementById("comment-text").value="";
+  loadComments()
+}
+loadComments();
+</script>
