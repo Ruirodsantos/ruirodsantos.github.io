@@ -2,46 +2,55 @@
 layout: default
 title: AI, but make it useful
 ---
-<div class="hero">
-  <p class="hero-kicker">Fresh daily — Written by AI, for humans</p>
-  <h1>AI explained.<br><em>Simply.</em></h1>
-  <p class="hero-sub">What is happening in AI and what it actually means for your wallet. No jargon, no hype — just the useful stuff.</p>
-  <div class="hero-badges">
-    <span class="badge green">Free to read</span>
-    <span class="badge purple">Updated daily</span>
-    <span class="badge">Plain English</span>
-  </div>
-</div>
 
-<div class="divider">
-  <p class="section-label">Latest posts</p>
-</div>
+<div class="newspaper">
+  {% assign posts = site.posts %}
+  {% assign hero = posts[0] %}
+  {% assign secondary = posts | slice: 1, 2 %}
+  {% assign rest = posts | slice: 3, 100 %}
 
-<div class="posts">
-  {% if site.posts.size == 0 %}
-  <div class="empty-state">
-    <div class="big">No posts yet</div>
-    <p>First posts arriving tomorrow. Check back soon.</p>
-  </div>
-  {% else %}
-  {% for post in site.posts %}
-  <a class="post-card" href="{{ post.url | relative_url }}">
-    <div class="post-card-inner">
-      <div class="post-card-body">
-        <div>
-          <p class="post-card-meta">{{ post.date | date: "%B %d, %Y" }}</p>
-          <p class="post-card-title">{{ post.title }}</p>
-          {% if post.excerpt %}<p class="post-card-excerpt">{{ post.excerpt }}</p>{% endif %}
+  {% if hero %}
+  <div class="hero-row">
+    <a class="hero-card" href="{{ hero.url | relative_url }}">
+      <div class="hero-img" style="background-image: url('{{ hero.image }}')">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+          <span class="hero-cat">AI</span>
+          <h1 class="hero-title">{{ hero.title }}</h1>
+          <p class="hero-excerpt">{{ hero.excerpt | truncate: 120 }}</p>
+          <span class="hero-meta">{{ hero.date | date: "%B %d, %Y" }}</span>
         </div>
-        <p class="post-card-footer">Read more</p>
       </div>
-      {% if post.image %}
-      <div class="post-card-img">
-        <img src="{{ post.image }}" alt="" loading="lazy">
-      </div>
-      {% endif %}
+    </a>
+    <div class="secondary-col">
+      {% for post in secondary %}
+      <a class="secondary-card" href="{{ post.url | relative_url }}">
+        <div class="secondary-img" style="background-image: url('{{ post.image }}')"></div>
+        <div class="secondary-body">
+          <h2 class="secondary-title">{{ post.title }}</h2>
+          <p class="secondary-excerpt">{{ post.excerpt | truncate: 80 }}</p>
+          <span class="secondary-meta">{{ post.date | date: "%B %d, %Y" }}</span>
+        </div>
+      </a>
+      {% endfor %}
     </div>
-  </a>
-  {% endfor %}
+  </div>
+  <div class="divider-line"><span>More stories</span></div>
+  {% if rest.size > 0 %}
+  <div class="grid-row">
+    {% for post in rest limit:9 %}
+    <a class="grid-card" href="{{ post.url | relative_url }}">
+      <div class="grid-img" style="background-image: url('{{ post.image }}')"></div>
+      <div class="grid-body">
+        <h3 class="grid-title">{{ post.title }}</h3>
+        <p class="grid-excerpt">{{ post.excerpt | truncate: 80 }}</p>
+        <span class="grid-meta">{{ post.date | date: "%B %d, %Y" }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty-state"><p>First stories arriving soon.</p></div>
   {% endif %}
 </div>
