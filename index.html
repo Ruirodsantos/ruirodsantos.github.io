@@ -11,10 +11,8 @@ title: AI Pulse — Daily AI news that makes sense
 
 <div class="page-wrap">
 
-  <!-- AD TOP -->
   <div class="ad-banner">Advertisement</div>
 
-  <!-- VALUE BAR: thin inline, no icons -->
   <div class="value-bar">
     <div class="value-bar-inner">
       <span class="value-item"><span class="value-dot"></span>Plain English</span>
@@ -28,25 +26,52 @@ title: AI Pulse — Daily AI news that makes sense
   {% if hero %}
   <div class="newspaper">
 
-    <!-- HERO + TRENDING SIDEBAR -->
+    <!-- MAIN ROW: hero left, sidebar right -->
     <div class="hero-row">
-      <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="all">
+
+      <!-- HERO — fully clickable -->
+      <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="all" style="display:block;cursor:pointer">
         <div class="hero-img" style="background-image:url('{{ hero.image }}')">
           <div class="hero-overlay"></div>
           <div class="hero-content">
             <span class="hero-cat">Top Story</span>
-            <h1 class="hero-title">{{ hero.title }}</h1>
+            <h2 class="hero-title">{{ hero.title }}</h2>
             <p class="hero-excerpt">{{ hero.excerpt | truncate: 130 }}</p>
             <span class="hero-meta">{{ hero.date | date: "%B %d, %Y" }}</span>
           </div>
         </div>
       </a>
+
+      <!-- RIGHT COLUMN: 2 secondary stories + trending + ad -->
       <div class="sidebar">
-        <p class="sidebar-header">Trending Now</p>
-        {% for post in posts limit:5 %}
+        {% if s1 %}
+        <a class="secondary-story post-item" href="{{ s1.url | relative_url }}" data-cat="all">
+          <div class="secondary-img" style="background-image:url('{{ s1.image }}')"></div>
+          <div class="secondary-body">
+            <p class="secondary-cat">AI &amp; Technology</p>
+            <p class="secondary-title">{{ s1.title | truncate: 75 }}</p>
+            <p class="secondary-meta">{{ s1.date | date: "%b %d, %Y" }}</p>
+          </div>
+        </a>
+        {% endif %}
+        {% if s2 %}
+        <a class="secondary-story post-item" href="{{ s2.url | relative_url }}" data-cat="all">
+          <div class="secondary-img" style="background-image:url('{{ s2.image }}')"></div>
+          <div class="secondary-body">
+            <p class="secondary-cat">AI &amp; Technology</p>
+            <p class="secondary-title">{{ s2.title | truncate: 75 }}</p>
+            <p class="secondary-meta">{{ s2.date | date: "%b %d, %Y" }}</p>
+          </div>
+        </a>
+        {% endif %}
+        <div class="sidebar-divider">
+          <span class="sidebar-header">Trending Now</span>
+        </div>
+        {% assign trending_start = 3 %}
+        {% for post in posts limit:4 offset:trending_start %}
         <a class="sidebar-card" href="{{ post.url | relative_url }}">
           <div class="sidebar-num">0{{ forloop.index }}</div>
-          <div class="sidebar-title-text">{{ post.title | truncate: 65 }}</div>
+          <div class="sidebar-title-text">{{ post.title | truncate: 60 }}</div>
           <div class="sidebar-meta">{{ post.date | date: "%b %d" }}</div>
         </a>
         {% endfor %}
@@ -54,45 +79,12 @@ title: AI Pulse — Daily AI news that makes sense
       </div>
     </div>
 
-    <!-- LATEST 2 STORIES -->
-    {% if s1 or s2 %}
-    <div class="section-header">
-      <div class="section-header-accent"></div>
-      <span class="section-header-title">Latest Stories</span>
-      <div class="section-header-line"></div>
-    </div>
-    <div class="grid-2">
-      {% if s1 %}
-      <a class="grid-card post-item" href="{{ s1.url | relative_url }}" data-cat="all">
-        <div class="grid-img grid-img-tall" style="background-image:url('{{ s1.image }}')"></div>
-        <div class="grid-body">
-          <p class="grid-cat">AI &amp; Technology</p>
-          <p class="grid-title">{{ s1.title }}</p>
-          <p class="grid-excerpt">{{ s1.excerpt | truncate: 90 }}</p>
-          <p class="grid-meta">{{ s1.date | date: "%B %d, %Y" }}</p>
-        </div>
-      </a>
-      {% endif %}
-      {% if s2 %}
-      <a class="grid-card post-item" href="{{ s2.url | relative_url }}" data-cat="all">
-        <div class="grid-img grid-img-tall" style="background-image:url('{{ s2.image }}')"></div>
-        <div class="grid-body">
-          <p class="grid-cat">AI &amp; Technology</p>
-          <p class="grid-title">{{ s2.title }}</p>
-          <p class="grid-excerpt">{{ s2.excerpt | truncate: 90 }}</p>
-          <p class="grid-meta">{{ s2.date | date: "%B %d, %Y" }}</p>
-        </div>
-      </a>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- EARNAPP BOX -->
+    <!-- EARNAPP -->
     <div class="earnapp-box">
       <div class="earnapp-body">
         <div class="earnapp-tag">Passive Income Opportunity</div>
         <h2 class="earnapp-title">Earn money from your unused internet</h2>
-        <p class="earnapp-sub">EarnApp pays you for sharing your unused bandwidth — no effort required. Install once, run in the background, get paid monthly via PayPal or gift cards. Completely free to join.</p>
+        <p class="earnapp-sub">EarnApp pays you for sharing your unused bandwidth — no effort required. Install once, run in the background, get paid monthly via PayPal or gift cards.</p>
       </div>
       <a class="earnapp-cta" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
         Start earning free
@@ -112,10 +104,9 @@ title: AI Pulse — Daily AI news that makes sense
       <p id="nl-msg" style="font-size:13px;color:var(--green);margin-top:10px;display:none">Thanks! We will be in touch soon.</p>
     </div>
 
-    <!-- AD MID -->
     <div class="ad-banner">Advertisement</div>
 
-    <!-- MORE STORIES + SIDEBAR -->
+    <!-- MORE STORIES -->
     {% if rest.size > 0 %}
     <div class="section-header">
       <div class="section-header-accent"></div>
@@ -126,11 +117,10 @@ title: AI Pulse — Daily AI news that makes sense
       <div class="grid-3">
         {% for post in rest limit:12 %}
         <a class="grid-card post-item" href="{{ post.url | relative_url }}" data-cat="all">
-          <div class="grid-img grid-img-short" style="background-image:url('{{ post.image }}')"></div>
-          <div class="grid-body">
+          <div class="grid-img-compact" style="background-image:url('{{ post.image }}');background-size:cover;background-position:center;height:130px;background-color:#e9ecef"></div>
+          <div class="grid-body-compact">
             <p class="grid-cat">AI &amp; Technology</p>
             <p class="grid-title">{{ post.title | truncate: 65 }}</p>
-            <p class="grid-excerpt">{{ post.excerpt | truncate: 80 }}</p>
             <p class="grid-meta">{{ post.date | date: "%b %d, %Y" }}</p>
           </div>
         </a>
@@ -139,41 +129,33 @@ title: AI Pulse — Daily AI news that makes sense
       <div>
         <div class="post-sidebar-widget">
           <p class="post-sidebar-widget-title">About AI Pulse</p>
-          <p style="font-size:13px;color:#495057;line-height:1.6;margin-bottom:12px">We explain AI developments in plain English and show you how to turn them into real opportunities. Published daily, free forever.</p>
+          <p style="font-size:13px;color:#495057;line-height:1.6;margin-bottom:12px">AI news in plain English, every day. Free forever.</p>
           <a href="/" style="display:inline-block;background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:8px 16px;border-radius:6px">Read all stories</a>
         </div>
         <div class="sidebar-ad-widget">Advertisement</div>
         <div class="post-sidebar-widget">
           <p class="post-sidebar-widget-title">Quick Reads</p>
-          {% for post in posts limit:5 offset:2 %}
+          {% for post in posts limit:5 offset:3 %}
           <div class="list-card">
             <div class="list-img" style="background-image:url('{{ post.image }}')"></div>
-            <div>
-              <p class="list-title">{{ post.title | truncate: 55 }}</p>
-              <p class="list-meta">{{ post.date | date: "%b %d" }}</p>
-            </div>
+            <div><p class="list-title">{{ post.title | truncate: 52 }}</p><p class="list-meta">{{ post.date | date: "%b %d" }}</p></div>
           </div>
           {% endfor %}
         </div>
-        <div class="earnapp-box" style="margin-top:14px;padding:18px;flex-direction:column;gap:12px">
-          <div>
-            <div class="earnapp-tag" style="margin-bottom:6px">Earn passive income</div>
-            <p style="font-size:14px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:10px">Get paid for your unused internet bandwidth</p>
-          </div>
-          <a href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener" class="earnapp-cta" style="padding:10px 16px">Join EarnApp free</a>
+        <div class="earnapp-box" style="margin-top:14px;padding:16px;flex-direction:column;gap:10px">
+          <div><div class="earnapp-tag" style="margin-bottom:5px">Earn passive income</div>
+          <p style="font-size:13px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:8px">Get paid for your unused internet bandwidth</p></div>
+          <a href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener" class="earnapp-cta" style="padding:9px 14px;font-size:13px">Join EarnApp free</a>
         </div>
       </div>
     </div>
     {% endif %}
 
-    <!-- AD BOTTOM -->
     <div class="ad-banner">Advertisement</div>
-
   </div>
   {% else %}
-  <div class="empty-state"><p>First stories arriving soon. Check back shortly.</p></div>
+  <div class="empty-state"><p>First stories arriving soon.</p></div>
   {% endif %}
-
 </div>
 
 <script>
