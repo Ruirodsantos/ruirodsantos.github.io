@@ -2,43 +2,79 @@
 layout: default
 ---
 {% if page.image %}
-<div class="post-hero" style="background-image:url('{{ page.image }}')">
+<div class="post-hero-wrap">
+  <div class="post-hero-img" style="background-image:url('{{ page.image }}')"></div>
   <div class="post-hero-overlay"></div>
 </div>
 {% endif %}
-<div class="post-page">
-  <a href="/" class="post-back">&#8592; Back to all stories</a>
-  <p class="post-page-cat">AI &amp; Technology</p>
-  <h1>{{ page.title }}</h1>
-  <div class="post-page-meta">
-    <span>{{ page.date | date: "%B %d, %Y" }}</span>
-    {% if page.source_url %}<span>&middot;</span><a href="{{ page.source_url }}" target="_blank" rel="noopener" style="color:var(--accent)">Original source &#8594;</a>{% endif %}
+
+<div class="post-layout">
+  <div class="post-main">
+    <a href="/" class="post-back">&#8592; Back to AI Pulse</a>
+    <p class="post-cat">AI &amp; Technology</p>
+    <h1>{{ page.title }}</h1>
+    <div class="post-meta">
+      <span>{{ page.date | date: "%B %d, %Y" }}</span>
+      <span>&middot;</span>
+      <span>5 min read</span>
+      {% if page.source_url %}<span>&middot;</span><a href="{{ page.source_url }}" target="_blank" rel="noopener" style="color:#28c45e;font-weight:600">Original source &#8594;</a>{% endif %}
+    </div>
+    <div class="post-body">{{ content }}</div>
+    <div class="ad-banner">Advertisement</div>
+    <div class="comments-wrap">
+      <h2 class="comments-title">Join the conversation</h2>
+      <div class="comment-form">
+        <div class="comment-row">
+          <input type="text" id="comment-name" placeholder="Your name" maxlength="50"/>
+          <input type="text" id="comment-email" placeholder="Email (not published)" maxlength="100"/>
+        </div>
+        <textarea id="comment-text" placeholder="Share your thoughts on this story..." maxlength="1000"></textarea>
+        <button class="comment-submit" onclick="submitComment()">Post comment</button>
+        <div class="comment-error" id="comment-error"></div>
+        <p class="comment-note">Be respectful. Offensive language is automatically blocked.</p>
+      </div>
+      <div class="comments-list" id="comments-list">
+        <div class="no-comments">No comments yet &mdash; be the first to share your thoughts!</div>
+      </div>
+    </div>
   </div>
-  <div class="post-page-body">{{ content }}</div>
+
+  <!-- POST SIDEBAR -->
+  <div class="post-sidebar-sticky">
+    <div class="post-sidebar-ad">
+      <span style="font-size:20px">&#128276;</span>
+      <span>Advertisement</span>
+    </div>
+    <div class="post-sidebar-widget">
+      <p class="post-sidebar-widget-title">About AI Pulse</p>
+      <p style="font-size:13px;color:#495057;line-height:1.6;margin-bottom:12px">We explain AI in plain English and show you how it affects your money and work. Published daily, free forever.</p>
+      <a href="/" style="display:inline-block;background:#180d3c;color:#fff;font-size:12px;font-weight:700;padding:8px 16px;border-radius:6px">Read more stories</a>
+    </div>
+    <div class="post-sidebar-widget">
+      <p class="post-sidebar-widget-title">Latest from AI Pulse</p>
+      {% for post in site.posts limit:4 %}
+      <div class="list-card">
+        <div class="list-img" style="background-image:url('{{ post.image }}')"></div>
+        <div>
+          <p class="list-title">{{ post.title | truncate: 55 }}</p>
+          <p class="list-meta">{{ post.date | date: "%b %d" }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
 </div>
-<div class="comments-section">
-  <h2 class="comments-title">Join the conversation</h2>
-  <div class="comment-form">
-    <input type="text" id="comment-name" placeholder="Your name" maxlength="50"/>
-    <textarea id="comment-text" placeholder="Share your thoughts..." maxlength="1000"></textarea>
-    <button class="comment-submit" onclick="submitComment()">Post comment</button>
-    <div class="comment-error" id="comment-error"></div>
-    <p class="comment-note">Be respectful. Offensive language will be blocked automatically.</p>
-  </div>
-  <div class="comments-list" id="comments-list">
-    <p style="color:var(--gray-400);font-size:14px">No comments yet. Be the first!</p>
-  </div>
-</div>
+
 <script>
-const BAD=["fuck","shit","bitch","asshole","bastard","cunt","dick","pussy","nigger","faggot","retard","whore","slut","cock","twat","wanker","prick","arse","bollocks","motherfucker"];
+const BAD=["fuck","shit","bitch","asshole","bastard","cunt","dick","pussy","nigger","faggot","retard","whore","slut","cock","twat","wanker","prick","bollocks","motherfucker"];
 const KEY="cmts_"+window.location.pathname.replace(/\//g,"_");
-function hasBad(t){const l=t.toLowerCase();return BAD.some(w=>new RegExp("\\b"+w+"\\b","i").test(l))}
+function hasBad(t){return BAD.some(w=>new RegExp("\\b"+w+"\\b","i").test(t.toLowerCase()))}
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 function showErr(m){const e=document.getElementById("comment-error");e.textContent=m;e.style.display="block"}
 function loadComments(){
   const s=JSON.parse(localStorage.getItem(KEY)||"[]");
   const l=document.getElementById("comments-list");
-  if(!s.length){l.innerHTML='<p style="color:var(--gray-400);font-size:14px">No comments yet. Be the first!</p>';return}
+  if(!s.length){l.innerHTML='<div class="no-comments">No comments yet &mdash; be the first to share your thoughts!</div>';return}
   l.innerHTML=s.map(c=>'<div class="comment-item"><div class="comment-author">'+esc(c.name)+'</div><div class="comment-text">'+esc(c.text)+'</div><div class="comment-date">'+c.date+'</div></div>').join("")
 }
 function submitComment(){
