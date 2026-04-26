@@ -10,38 +10,25 @@ title: AI Pulse — Daily AI news that makes sense
 {% assign rest = posts | slice: 3, 100 %}
 
 <div class="page-wrap">
+
+  <!-- AD TOP -->
   <div class="ad-banner">Advertisement</div>
+
+  <!-- VALUE BAR: thin inline, no icons -->
+  <div class="value-bar">
+    <div class="value-bar-inner">
+      <span class="value-item"><span class="value-dot"></span>Plain English</span>
+      <span class="value-item"><span class="value-dot"></span>Make Money</span>
+      <span class="value-item"><span class="value-dot"></span>Daily Updates</span>
+      <span class="value-item"><span class="value-dot"></span>Free Forever</span>
+      <span class="value-item"><span class="value-dot"></span>No Paywall</span>
+    </div>
+  </div>
 
   {% if hero %}
   <div class="newspaper">
 
-    <!-- VALUE STRIP -->
-    <div class="explainer">
-      <div class="explainer-inner">
-        <div class="explainer-item">
-          <div class="explainer-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-          <div class="explainer-label">Plain English</div>
-          <div class="explainer-desc">No jargon, ever</div>
-        </div>
-        <div class="explainer-item">
-          <div class="explainer-icon"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-          <div class="explainer-label">Make Money</div>
-          <div class="explainer-desc">Real opportunities</div>
-        </div>
-        <div class="explainer-item">
-          <div class="explainer-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-          <div class="explainer-label">Daily Updates</div>
-          <div class="explainer-desc">Fresh every morning</div>
-        </div>
-        <div class="explainer-item">
-          <div class="explainer-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
-          <div class="explainer-label">Free Forever</div>
-          <div class="explainer-desc">No paywall, ever</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- HERO + TRENDING -->
+    <!-- HERO + TRENDING SIDEBAR -->
     <div class="hero-row">
       <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="all">
         <div class="hero-img" style="background-image:url('{{ hero.image }}')">
@@ -55,7 +42,7 @@ title: AI Pulse — Daily AI news that makes sense
         </div>
       </a>
       <div class="sidebar">
-        <p class="sidebar-title">Trending Now</p>
+        <p class="sidebar-header">Trending Now</p>
         {% for post in posts limit:5 %}
         <a class="sidebar-card" href="{{ post.url | relative_url }}">
           <div class="sidebar-num">0{{ forloop.index }}</div>
@@ -67,34 +54,45 @@ title: AI Pulse — Daily AI news that makes sense
       </div>
     </div>
 
-    <!-- LATEST 2 -->
+    <!-- LATEST 2 STORIES -->
     {% if s1 or s2 %}
     <div class="section-header">
       <div class="section-header-accent"></div>
       <span class="section-header-title">Latest Stories</span>
       <div class="section-header-line"></div>
     </div>
-    <div class="grid-2" style="margin-bottom:28px">
-      {% if s1 %}<a class="grid-card post-item" href="{{ s1.url | relative_url }}" data-cat="all">
+    <div class="grid-2">
+      {% if s1 %}
+      <a class="grid-card post-item" href="{{ s1.url | relative_url }}" data-cat="all">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s1.image }}')"></div>
-        <div class="grid-body"><p class="grid-cat">AI &amp; Technology</p><p class="grid-title">{{ s1.title }}</p><p class="grid-excerpt">{{ s1.excerpt | truncate: 90 }}</p><p class="grid-meta">{{ s1.date | date: "%B %d, %Y" }}</p></div>
-      </a>{% endif %}
-      {% if s2 %}<a class="grid-card post-item" href="{{ s2.url | relative_url }}" data-cat="all">
+        <div class="grid-body">
+          <p class="grid-cat">AI &amp; Technology</p>
+          <p class="grid-title">{{ s1.title }}</p>
+          <p class="grid-excerpt">{{ s1.excerpt | truncate: 90 }}</p>
+          <p class="grid-meta">{{ s1.date | date: "%B %d, %Y" }}</p>
+        </div>
+      </a>
+      {% endif %}
+      {% if s2 %}
+      <a class="grid-card post-item" href="{{ s2.url | relative_url }}" data-cat="all">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s2.image }}')"></div>
-        <div class="grid-body"><p class="grid-cat">AI &amp; Technology</p><p class="grid-title">{{ s2.title }}</p><p class="grid-excerpt">{{ s2.excerpt | truncate: 90 }}</p><p class="grid-meta">{{ s2.date | date: "%B %d, %Y" }}</p></div>
-      </a>{% endif %}
+        <div class="grid-body">
+          <p class="grid-cat">AI &amp; Technology</p>
+          <p class="grid-title">{{ s2.title }}</p>
+          <p class="grid-excerpt">{{ s2.excerpt | truncate: 90 }}</p>
+          <p class="grid-meta">{{ s2.date | date: "%B %d, %Y" }}</p>
+        </div>
+      </a>
+      {% endif %}
     </div>
     {% endif %}
 
     <!-- EARNAPP BOX -->
     <div class="earnapp-box">
-      <div>
-        <div class="earnapp-tag">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Passive Income Opportunity
-        </div>
+      <div class="earnapp-body">
+        <div class="earnapp-tag">Passive Income Opportunity</div>
         <h2 class="earnapp-title">Earn money from your unused internet</h2>
-        <p class="earnapp-sub">EarnApp pays you for sharing your unused bandwidth — no effort required. Just install, run in the background, and get paid monthly via PayPal or gift cards. Completely free to join.</p>
+        <p class="earnapp-sub">EarnApp pays you for sharing your unused bandwidth — no effort required. Install once, run in the background, get paid monthly via PayPal or gift cards. Completely free to join.</p>
       </div>
       <a class="earnapp-cta" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
         Start earning free
@@ -104,10 +102,7 @@ title: AI Pulse — Daily AI news that makes sense
 
     <!-- NEWSLETTER -->
     <div class="newsletter" id="newsletter-section">
-      <div class="newsletter-tag">
-        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        Free Newsletter
-      </div>
+      <div class="newsletter-tag">Free Newsletter</div>
       <h2 class="newsletter-title">Get AI news in your inbox every morning</h2>
       <p class="newsletter-sub">Join readers who start their day with AI Pulse. No spam, unsubscribe anytime.</p>
       <div class="newsletter-form">
@@ -117,9 +112,10 @@ title: AI Pulse — Daily AI news that makes sense
       <p id="nl-msg" style="font-size:13px;color:var(--green);margin-top:10px;display:none">Thanks! We will be in touch soon.</p>
     </div>
 
+    <!-- AD MID -->
     <div class="ad-banner">Advertisement</div>
 
-    <!-- MORE STORIES -->
+    <!-- MORE STORIES + SIDEBAR -->
     {% if rest.size > 0 %}
     <div class="section-header">
       <div class="section-header-accent"></div>
@@ -131,49 +127,59 @@ title: AI Pulse — Daily AI news that makes sense
         {% for post in rest limit:12 %}
         <a class="grid-card post-item" href="{{ post.url | relative_url }}" data-cat="all">
           <div class="grid-img grid-img-short" style="background-image:url('{{ post.image }}')"></div>
-          <div class="grid-body"><p class="grid-cat">AI &amp; Technology</p><p class="grid-title">{{ post.title | truncate: 65 }}</p><p class="grid-excerpt">{{ post.excerpt | truncate: 80 }}</p><p class="grid-meta">{{ post.date | date: "%b %d, %Y" }}</p></div>
+          <div class="grid-body">
+            <p class="grid-cat">AI &amp; Technology</p>
+            <p class="grid-title">{{ post.title | truncate: 65 }}</p>
+            <p class="grid-excerpt">{{ post.excerpt | truncate: 80 }}</p>
+            <p class="grid-meta">{{ post.date | date: "%b %d, %Y" }}</p>
+          </div>
         </a>
         {% endfor %}
       </div>
       <div>
         <div class="post-sidebar-widget">
           <p class="post-sidebar-widget-title">About AI Pulse</p>
-          <p style="font-size:13px;color:#495057;line-height:1.6;margin-bottom:12px">We explain AI developments in plain English every day and show you how to turn them into real opportunities.</p>
+          <p style="font-size:13px;color:#495057;line-height:1.6;margin-bottom:12px">We explain AI developments in plain English and show you how to turn them into real opportunities. Published daily, free forever.</p>
           <a href="/" style="display:inline-block;background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:8px 16px;border-radius:6px">Read all stories</a>
         </div>
-        <div class="sidebar-ad">Advertisement</div>
-        <div class="post-sidebar-widget" style="margin-top:16px">
+        <div class="sidebar-ad-widget">Advertisement</div>
+        <div class="post-sidebar-widget">
           <p class="post-sidebar-widget-title">Quick Reads</p>
           {% for post in posts limit:5 offset:2 %}
           <div class="list-card">
             <div class="list-img" style="background-image:url('{{ post.image }}')"></div>
-            <div><p class="list-title">{{ post.title | truncate: 55 }}</p><p class="list-meta">{{ post.date | date: "%b %d" }}</p></div>
+            <div>
+              <p class="list-title">{{ post.title | truncate: 55 }}</p>
+              <p class="list-meta">{{ post.date | date: "%b %d" }}</p>
+            </div>
           </div>
           {% endfor %}
         </div>
-        <div class="earnapp-box" style="margin-top:16px;padding:20px;display:block">
-          <div class="earnapp-tag" style="margin-bottom:8px">
-            <svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:var(--green)"><circle cx="12" cy="12" r="10"/></svg>
-            Earn passive income
+        <div class="earnapp-box" style="margin-top:14px;padding:18px;flex-direction:column;gap:12px">
+          <div>
+            <div class="earnapp-tag" style="margin-bottom:6px">Earn passive income</div>
+            <p style="font-size:14px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:10px">Get paid for your unused internet bandwidth</p>
           </div>
-          <p style="font-size:14px;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.3">Get paid for your unused internet bandwidth</p>
-          <a href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener" class="earnapp-cta" style="display:block;text-align:center;padding:10px">Join EarnApp free</a>
+          <a href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener" class="earnapp-cta" style="padding:10px 16px">Join EarnApp free</a>
         </div>
       </div>
     </div>
     {% endif %}
 
+    <!-- AD BOTTOM -->
     <div class="ad-banner">Advertisement</div>
+
   </div>
   {% else %}
-  <div class="empty-state"><p>First stories arriving soon.</p></div>
+  <div class="empty-state"><p>First stories arriving soon. Check back shortly.</p></div>
   {% endif %}
+
 </div>
 
 <script>
 function subscribeNewsletter(){
-  const email = document.getElementById('nl-email').value.trim();
-  if(!email || !email.includes('@')){alert('Please enter a valid email.');return;}
+  const email=document.getElementById('nl-email').value.trim();
+  if(!email||!email.includes('@')){alert('Please enter a valid email.');return;}
   document.getElementById('nl-email').value='';
   document.getElementById('nl-msg').style.display='block';
 }
