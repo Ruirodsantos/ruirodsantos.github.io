@@ -2,7 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>{{ page.title | escape }} — AI Pulse</title>
+  <title>{{ page.title | escape }} â AI Pulse</title>
+  <!-- Canonical -->
+  <link rel="canonical" href="https://ruirodsantos.github.io{{ page.url }}"/>
+  <!-- Primary Meta -->
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"/>
+  <meta name="author" content="AI Pulse"/>
+  <meta name="keywords" content="AI news, artificial intelligence, machine learning, AI tools, ChatGPT, make money with AI, AI business, technology news"/>
+  {% if page.excerpt %}<meta name="description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta name="description" content="{{ site.description }}"/>{% endif %}
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}"/>
+  <meta property="og:site_name" content="AI Pulse"/>
+  <meta property="og:title" content="{{ page.title | default: site.title }} — AI Pulse"/>
+  {% if page.excerpt %}<meta property="og:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta property="og:description" content="{{ site.description }}"/>{% endif %}
+  <meta property="og:url" content="https://ruirodsantos.github.io{{ page.url }}"/>
+  {% if page.image %}<meta property="og:image" content="{{ page.image }}"/>{% endif %}
+  {% if page.date %}<meta property="article:published_time" content="{{ page.date | date_to_xmlschema }}"/>{% endif %}
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:site" content="@aipulse"/>
+  <meta name="twitter:title" content="{{ page.title | default: site.title }} — AI Pulse"/>
+  {% if page.excerpt %}<meta name="twitter:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta name="twitter:description" content="{{ site.description }}"/>{% endif %}
+  {% if page.image %}<meta name="twitter:image" content="{{ page.image }}"/>{% endif %}
+  <!-- Schema.org WebSite -->
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"AI Pulse","url":"https://ruirodsantos.github.io","description":"{{ site.description }}","potentialAction":{"@type":"SearchAction","target":"https://ruirodsantos.github.io/?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta name="description" content="AI explained simply. What it means for your money, your work, and your future."/>
   <!-- Google Analytics -->
@@ -262,7 +285,7 @@
   </footer>
 
   <script>
-  // Category filtering — works on ALL pages
+  // Category filtering â works on ALL pages
   function initCats(){
     document.querySelectorAll('.cat-link').forEach(link=>{
       link.addEventListener('click',e=>{
