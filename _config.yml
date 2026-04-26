@@ -1,13 +1,34 @@
-title: AI Discovery Blog
-description: Discover the latest tools, breakthroughs, and trends in Artificial Intelligence
-url: https://ruirodsantos.github.io
-permalink: /ai/news/:year/:month/:day/:title.html
+title: AI Pulse
+description: "Daily AI news explained simply. No jargon, no hype — just what it means for your money, your work, and your future."
+url: "https://ruirodsantos.github.io"
+baseurl: ""
+author:
+  name: AI Pulse
+  email: contact@aipulse.ai
+
+# SEO
+lang: en
 timezone: UTC
+permalink: /:categories/:year/:month/:day/:title/
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Feed
+feed:
+  path: feed.xml
+
+# Build
 markdown: kramdown
-kramdown:
-  input: GFM
+highlighter: rouge
 exclude:
-  - scripts
-  - .github
-  - README.md
-plugins: []
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .sass-cache
+  - .jekyll-cache
+  - assets/cache
