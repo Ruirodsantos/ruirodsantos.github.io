@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os, re, hashlib, json
+import os, re, hashlib
 from datetime import datetime, timezone
 import xml.etree.ElementTree as ET
 import requests
@@ -13,7 +13,8 @@ PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 MAX_POSTS = 3
 POSTS_DIR = "_posts"
 ASSET_CACHE_DIR = "assets/cache"
-USER_AGENT = "ai-blog-bot/4.0"
+USER_AGENT = "ai-blog-bot/5.0"
+NL = chr(10)
 
 RSS_FEEDS = [
     "https://techcrunch.com/category/artificial-intelligence/feed/",
@@ -44,7 +45,7 @@ def dbg(msg):
 def clean(s):
     if not s:
         return ""
-    return re.sub(r"\\s+", " ", str(s)).strip()
+    return re.sub(r"\s+", " ", str(s)).strip()
 
 
 def ensure_dir(p):
@@ -58,7 +59,7 @@ def yml_safe(s):
     return s
 
 
-def shorten(s, n=200):
+def shorten(s, n=160):
     s = clean(s)
     return s if len(s) <= n else s[:n - 1].rstrip() + "..."
 
@@ -78,7 +79,7 @@ def fetch_pexels_image(query):
         photos = r.json().get("photos", [])
         if photos:
             url = photos[0]["src"]["large2x"]
-            dbg("Image found: " + url[:60])
+            dbg("Image: " + url[:60])
             return url
     except Exception as e:
         dbg("Pexels error: " + str(e))
@@ -96,9 +97,8 @@ def fetch_rss(url):
             link = clean(item.findtext("link") or "")
             desc = clean(item.findtext("description") or "")
             desc = re.sub(r"<[^>]+>", "", desc)
-            pub = clean(item.findtext("pubDate") or "")
             if title and link and len(desc) > 30:
-                items.append({"title": title, "link": link, "description": desc, "pubDate": pub})
+                items.append({"title": title, "link": link, "description": desc})
         return items
     except Exception as e:
         dbg("RSS error " + url + ": " + str(e))
@@ -106,11 +106,11 @@ def fetch_rss(url):
 
 
 def fetch_news(limit):
-    dbg("Fetching from RSS feeds...")
+    dbg("Fetching RSS...")
     all_items = []
     for feed_url in RSS_FEEDS:
         items = fetch_rss(feed_url)
-        dbg("Got " + str(len(items)) + " items from " + feed_url)
+        dbg(str(len(items)) + " from " + feed_url)
         all_items.extend(items)
         if len(all_items) >= limit * 5:
             break
@@ -120,8 +120,8 @@ def fetch_news(limit):
 def generate_post(article):
     if not ANTHROPIC_API_KEY:
         raise SystemExit("ANTHROPIC_API_KEY not set")
-    dbg("Generating post for: " + article["title"][:60])
-    user_msg = "Article title: " + article["title"] + "\\n\\nArticle summary: " + article["description"][:500]
+    dbg("Writing: " + article["title"][:60])
+    user_msg = "Article title: " + article["title"] + chr(10) + chr(10) + "Article summary: " + article["description"][:500]
     payload = {
         "model": "claude-sonnet-4-6",
         "max_tokens": 1000,
@@ -135,8 +135,7 @@ def generate_post(article):
     }
     r = requests.post(ANTHROPIC_API_URL, json=payload, headers=headers, timeout=60)
     r.raise_for_status()
-    data = r.json()
-    for block in data.get("content", []):
+    for block in r.json().get("content", []):
         if block.get("type") == "text":
             return block["text"].strip()
     return None
@@ -155,7 +154,7 @@ def build_post(article, body, image_url):
         'source_url: "' + yml_safe(article.get("link", "")) + '"',
         "---",
     ]
-    return "\\n".join(lines) + "\\n\\n" + body + "\\n"
+    return NL.join(lines) + NL + NL + body + NL
 
 
 def make_filename(title):
@@ -168,7 +167,7 @@ def write_post(article, body, image_url):
     ensure_dir(POSTS_DIR)
     path = make_filename(article["title"])
     if os.path.exists(path):
-        dbg("Skip (exists): " + os.path.basename(path))
+        dbg("Skip: " + os.path.basename(path))
         return None
     with open(path, "w", encoding="utf-8") as f:
         f.write(build_post(article, body, image_url))
@@ -183,11 +182,7 @@ def main():
         open(gk, "w").close()
 
     articles = fetch_news(MAX_POSTS)
-    dbg("Total candidates: " + str(len(articles)))
-
-    if not articles:
-        dbg("No articles fetched.")
-        return
+    dbg("Candidates: " + str(len(articles)))
 
     created = 0
     for article in articles:
@@ -196,14 +191,11 @@ def main():
         try:
             image_url = fetch_pexels_image(article["title"])
             if not image_url:
-                dbg("No image found for: " + article["title"][:60] + " — skipping")
+                dbg("No image, skip: " + article["title"][:50])
                 continue
-
             body = generate_post(article)
             if not body:
-                dbg("Empty response for: " + article["title"][:60])
                 continue
-
             result = write_post(article, body, image_url)
             if result:
                 created += 1
