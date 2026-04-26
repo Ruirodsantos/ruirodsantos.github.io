@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>{{ page.title | escape }} â AI Pulse</title>
+  <title>{{ page.title | escape }} Ã¢ÂÂ AI Pulse</title>
   <!-- Canonical -->
   <link rel="canonical" href="https://ruirodsantos.github.io{{ page.url }}"/>
   <!-- Primary Meta -->
@@ -13,7 +13,7 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}"/>
   <meta property="og:site_name" content="AI Pulse"/>
-  <meta property="og:title" content="{{ page.title | default: site.title }} — AI Pulse"/>
+  <meta property="og:title" content="{{ page.title | default: site.title }} â AI Pulse"/>
   {% if page.excerpt %}<meta property="og:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta property="og:description" content="{{ site.description }}"/>{% endif %}
   <meta property="og:url" content="https://ruirodsantos.github.io{{ page.url }}"/>
   {% if page.image %}<meta property="og:image" content="{{ page.image }}"/>{% endif %}
@@ -21,7 +21,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:site" content="@aipulse"/>
-  <meta name="twitter:title" content="{{ page.title | default: site.title }} — AI Pulse"/>
+  <meta name="twitter:title" content="{{ page.title | default: site.title }} â AI Pulse"/>
   {% if page.excerpt %}<meta name="twitter:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta name="twitter:description" content="{{ site.description }}"/>{% endif %}
   {% if page.image %}<meta name="twitter:image" content="{{ page.image }}"/>{% endif %}
   <!-- Schema.org WebSite -->
@@ -274,7 +274,7 @@
           <p class="footer-desc">Daily AI news explained simply. No jargon, no hype &mdash; just what matters for your wallet and your work.</p>
         </div>
         <div><p class="footer-col-title">Topics</p><div class="footer-links"><a href="/">AI Tools</a><a href="/">Business AI</a><a href="/">Make Money</a><a href="/">Big Tech</a><a href="/">Research</a></div></div>
-        <div><p class="footer-col-title">About</p><div class="footer-links"><a href="/">About us</a><a href="/">Contact</a><a href="/">Privacy</a><a href="/">Terms</a></div></div>
+        <div><p class="footer-col-title">About</p><div class="footer-links"><a href="/about/">About us</a><a href="/contact/">Contact</a><a href="/privacy/">Privacy Policy</a><a href="/privacy/">Terms</a></div></div>
         <div><p class="footer-col-title">Connect</p><div class="footer-links"><a href="/">Twitter / X</a><a href="/">LinkedIn</a><a href="#newsletter-section">Newsletter</a><a href="/">RSS Feed</a></div></div>
       </div>
       <div class="footer-bottom">
@@ -285,7 +285,7 @@
   </footer>
 
   <script>
-  // Category filtering â works on ALL pages
+  // Category filtering Ã¢ÂÂ works on ALL pages
   function initCats(){
     document.querySelectorAll('.cat-link').forEach(link=>{
       link.addEventListener('click',e=>{
