@@ -1,308 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <title>{{ page.title | escape }} — AI, but make it useful</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="AI explained simply. What it is, and how to make money from it." />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --black: #0a0a0a;
-      --white: #ffffff;
-      --accent: #6366f1;
-      --accent-light: #818cf8;
-      --gray-50: #f9fafb;
-      --gray-100: #f3f4f6;
-      --gray-200: #e5e7eb;
-      --gray-400: #9ca3af;
-      --gray-600: #4b5563;
-      --gray-800: #1f2937;
-      --green: #10b981;
-      --radius: 12px;
-      --max-w: 780px;
-    }
-    html { font-size: 16px; }
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--white);
-      color: var(--black);
-      line-height: 1.7;
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: inherit; text-decoration: none; }
-
-    /* NAV */
-    .nav {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--gray-200);
-      padding: 0 24px;
-    }
-    .nav-inner {
-      max-width: var(--max-w);
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 60px;
-    }
-    .nav-logo {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      color: var(--black);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .nav-logo .dot {
-      width: 8px; height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
-      display: inline-block;
-    }
-    .nav-tag {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--accent);
-      background: #eef2ff;
-      padding: 4px 10px;
-      border-radius: 20px;
-    }
-
-    /* HERO */
-    .hero {
-      max-width: var(--max-w);
-      margin: 0 auto;
-      padding: 80px 24px 64px;
-    }
-    .hero-kicker {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-    .hero h1 {
-      font-size: clamp(32px, 5vw, 52px);
-      font-weight: 700;
-      line-height: 1.15;
-      letter-spacing: -1.5px;
-      color: var(--black);
-      margin-bottom: 20px;
-    }
-    .hero h1 em {
-      font-style: normal;
-      color: var(--accent);
-    }
-    .hero-sub {
-      font-size: 18px;
-      color: var(--gray-600);
-      max-width: 520px;
-      line-height: 1.6;
-      margin-bottom: 32px;
-    }
-    .hero-badges {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .badge {
-      font-size: 13px;
-      font-weight: 500;
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1.5px solid var(--gray-200);
-      color: var(--gray-600);
-    }
-    .badge.green { border-color: #d1fae5; color: #065f46; background: #f0fdf4; }
-    .badge.purple { border-color: #e0e7ff; color: #4338ca; background: #eef2ff; }
-
-    /* DIVIDER */
-    .divider {
-      max-width: var(--max-w);
-      margin: 0 auto;
-      padding: 0 24px;
-      border-top: 1px solid var(--gray-200);
-    }
-    .section-label {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--gray-400);
-      padding: 24px 0 20px;
-    }
-
-    /* POSTS */
-    .posts {
-      max-width: var(--max-w);
-      margin: 0 auto;
-      padding: 0 24px 80px;
-    }
-    .post-card {
-      display: block;
-      border: 1.5px solid var(--gray-200);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 20px;
-      transition: border-color 0.15s, transform 0.15s;
-    }
-    .post-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-    }
-    .post-card-inner {
-      display: grid;
-      grid-template-columns: 1fr 200px;
-      min-height: 140px;
-    }
-    .post-card-body {
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .post-card-meta {
-      font-size: 12px;
-      color: var(--gray-400);
-      font-weight: 500;
-      margin-bottom: 8px;
-    }
-    .post-card-title {
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 1.35;
-      letter-spacing: -0.3px;
-      color: var(--black);
-      margin-bottom: 10px;
-    }
-    .post-card-excerpt {
-      font-size: 14px;
-      color: var(--gray-600);
-      line-height: 1.5;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .post-card-footer {
-      margin-top: 16px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--accent);
-    }
-    .post-card-img {
-      background: var(--gray-100);
-      overflow: hidden;
-    }
-    .post-card-img img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 60px 24px;
-      color: var(--gray-400);
-    }
-    .empty-state .big { font-size: 40px; margin-bottom: 12px; }
-    .empty-state p { font-size: 15px; }
-
-    /* POST PAGE */
-    .post-page {
-      max-width: var(--max-w);
-      margin: 0 auto;
-      padding: 48px 24px 80px;
-    }
-    .post-page-kicker {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 12px;
-    }
-    .post-page h1 {
-      font-size: clamp(24px, 4vw, 38px);
-      font-weight: 700;
-      letter-spacing: -1px;
-      line-height: 1.2;
-      margin-bottom: 16px;
-    }
-    .post-page-meta {
-      font-size: 13px;
-      color: var(--gray-400);
-      margin-bottom: 32px;
-      padding-bottom: 32px;
-      border-bottom: 1px solid var(--gray-200);
-    }
-    .post-page-body {
-      font-size: 17px;
-      line-height: 1.8;
-      color: var(--gray-800);
-    }
-    .post-page-body p { margin-bottom: 20px; }
-    .post-source {
-      margin-top: 40px;
-      padding: 16px 20px;
-      background: var(--gray-50);
-      border-radius: var(--radius);
-      border: 1px solid var(--gray-200);
-      font-size: 13px;
-      color: var(--gray-600);
-    }
-    .post-source a { color: var(--accent); font-weight: 500; }
-
-    /* FOOTER */
-    .footer {
-      border-top: 1px solid var(--gray-200);
-      padding: 32px 24px;
-    }
-    .footer-inner {
-      max-width: var(--max-w);
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      color: var(--gray-400);
-    }
-    .footer-logo { font-weight: 600; color: var(--black); }
-
-    @media (max-width: 600px) {
-      .post-card-inner { grid-template-columns: 1fr; }
-      .post-card-img { height: 160px; }
-      .hero h1 { letter-spacing: -0.5px; }
-    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--black:#0a0a0a;--white:#fff;--accent:#6366f1;--gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-400:#9ca3af;--gray-600:#4b5563;--gray-800:#1f2937;--red:#ef4444;--max-w:1100px;--radius:10px}
+    html{font-size:16px}
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--gray-50);color:var(--black);line-height:1.6;-webkit-font-smoothing:antialiased}
+    a{color:inherit;text-decoration:none}
+    .nav{background:var(--black);padding:0 24px;position:sticky;top:0;z-index:100}
+    .nav-inner{max-width:var(--max-w);margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px}
+    .nav-logo{font-family:'Playfair Display',serif;font-size:20px;color:var(--white);letter-spacing:-0.3px}
+    .nav-logo span{color:var(--accent)}
+    .nav-tag{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--black);background:var(--accent);padding:4px 10px;border-radius:20px}
+    .ticker{background:var(--accent);padding:7px 24px;overflow:hidden}
+    .ticker-inner{max-width:var(--max-w);margin:0 auto;display:flex;align-items:center;gap:16px}
+    .ticker-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:white;white-space:nowrap}
+    .ticker-text{font-size:13px;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .newspaper{max-width:var(--max-w);margin:0 auto;padding:24px 16px 60px}
+    .hero-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px}
+    .hero-card{display:block;border-radius:var(--radius);overflow:hidden;position:relative}
+    .hero-img{height:480px;background-size:cover;background-position:center;position:relative;display:flex;align-items:flex-end;background-color:#1f2937}
+    .hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.2) 60%,transparent 100%)}
+    .hero-content{position:relative;padding:28px;color:white}
+    .hero-cat{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:rgba(99,102,241,.15);border:1px solid var(--accent);padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:10px}
+    .hero-title{font-family:'Playfair Display',serif;font-size:clamp(20px,3vw,30px);line-height:1.2;margin-bottom:10px;color:white}
+    .hero-excerpt{font-size:14px;color:rgba(255,255,255,.8);margin-bottom:12px;line-height:1.5}
+    .hero-meta{font-size:12px;color:rgba(255,255,255,.6);font-weight:500}
+    .secondary-col{display:flex;flex-direction:column;gap:16px}
+    .secondary-card{display:block;background:white;border-radius:var(--radius);overflow:hidden;flex:1;transition:transform .15s}
+    .secondary-card:hover{transform:translateY(-2px)}
+    .secondary-img{height:160px;background-size:cover;background-position:center;background-color:#1f2937}
+    .secondary-body{padding:14px}
+    .secondary-title{font-family:'Playfair Display',serif;font-size:16px;line-height:1.3;margin-bottom:6px;color:var(--black)}
+    .secondary-excerpt{font-size:13px;color:var(--gray-600);line-height:1.5;margin-bottom:8px}
+    .secondary-meta{font-size:11px;color:var(--gray-400);font-weight:500}
+    .divider-line{display:flex;align-items:center;gap:16px;margin:8px 0 20px}
+    .divider-line::before,.divider-line::after{content:'';flex:1;height:1px;background:var(--gray-200)}
+    .divider-line span{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-400);white-space:nowrap}
+    .grid-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .grid-card{display:block;background:white;border-radius:var(--radius);overflow:hidden;transition:transform .15s}
+    .grid-card:hover{transform:translateY(-2px)}
+    .grid-img{height:180px;background-size:cover;background-position:center;background-color:#1f2937}
+    .grid-body{padding:14px}
+    .grid-title{font-family:'Playfair Display',serif;font-size:15px;line-height:1.35;margin-bottom:6px;color:var(--black)}
+    .grid-excerpt{font-size:12px;color:var(--gray-600);line-height:1.5;margin-bottom:8px}
+    .grid-meta{font-size:11px;color:var(--gray-400);font-weight:500}
+    .empty-state{text-align:center;padding:80px 24px;color:var(--gray-400);font-size:16px}
+    .post-hero{width:100%;height:420px;background-size:cover;background-position:center;position:relative;background-color:#1f2937}
+    .post-hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6) 0%,transparent 60%)}
+    .post-page{max-width:740px;margin:0 auto;padding:40px 24px 40px}
+    .post-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--accent);font-weight:500;margin-bottom:24px}
+    .post-back:hover{text-decoration:underline}
+    .post-page-cat{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+    .post-page h1{font-family:'Playfair Display',serif;font-size:clamp(26px,4vw,40px);font-weight:700;letter-spacing:-.5px;line-height:1.2;margin-bottom:16px;color:var(--black)}
+    .post-page-meta{font-size:13px;color:var(--gray-400);margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .post-page-body{font-size:17px;line-height:1.8;color:var(--gray-800)}
+    .post-page-body p{margin-bottom:20px}
+    .comments-section{max-width:740px;margin:0 auto;padding:0 24px 60px}
+    .comments-title{font-family:'Playfair Display',serif;font-size:22px;margin-bottom:24px;padding-top:32px;border-top:2px solid var(--black)}
+    .comment-form{background:white;border-radius:var(--radius);padding:20px;margin-bottom:32px;border:1px solid var(--gray-200)}
+    .comment-form input,.comment-form textarea{width:100%;padding:10px 14px;border:1px solid var(--gray-200);border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:12px;background:var(--gray-50);color:var(--black)}
+    .comment-form textarea{height:100px;resize:vertical}
+    .comment-form input:focus,.comment-form textarea:focus{outline:none;border-color:var(--accent)}
+    .comment-submit{background:var(--accent);color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+    .comment-submit:hover{opacity:.9}
+    .comment-note{font-size:12px;color:var(--gray-400);margin-top:10px}
+    .comments-list{display:flex;flex-direction:column;gap:16px}
+    .comment-item{background:white;border-radius:var(--radius);padding:16px 20px;border:1px solid var(--gray-200)}
+    .comment-author{font-weight:600;font-size:14px;margin-bottom:6px;color:var(--black)}
+    .comment-text{font-size:14px;color:var(--gray-600);line-height:1.6}
+    .comment-date{font-size:11px;color:var(--gray-400);margin-top:8px}
+    .comment-error{color:var(--red);font-size:13px;margin-top:8px;display:none}
+    .footer{background:var(--black);padding:28px 24px}
+    .footer-inner{max-width:var(--max-w);margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+    .footer-logo{font-family:'Playfair Display',serif;font-size:18px;color:white}
+    .footer-logo span{color:var(--accent)}
+    .footer-text{font-size:12px;color:var(--gray-400)}
+    @media(max-width:768px){.hero-row{grid-template-columns:1fr}.hero-img{height:320px}.grid-row{grid-template-columns:1fr 1fr}.post-hero{height:260px}}
+    @media(max-width:500px){.grid-row{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <nav class="nav">
     <div class="nav-inner">
-      <a href="/" class="nav-logo">
-        <span class="dot"></span>
-        AI, but make it useful
-      </a>
-      <span class="nav-tag">Daily</span>
+      <a href="/" class="nav-logo">AI<span>,</span> but make it useful</a>
+      <span class="nav-tag">Live</span>
     </div>
   </nav>
-
-  <main>
-    {{ content }}
-  </main>
-
+  {% if site.posts.size > 0 %}
+  <div class="ticker">
+    <div class="ticker-inner">
+      <span class="ticker-label">Latest</span>
+      <span class="ticker-text">{{ site.posts.first.title }}</span>
+    </div>
+  </div>
+  {% endif %}
+  <main>{{ content }}</main>
   <footer class="footer">
     <div class="footer-inner">
-      <span class="footer-logo">AI, but make it useful</span>
-      <span>Updated daily · {{ "now" | date: "%Y" }}</span>
+      <span class="footer-logo">AI<span>,</span> but make it useful</span>
+      <span class="footer-text">Updated daily &middot; {{ "now" | date: "%Y" }}</span>
     </div>
   </footer>
 </body>
