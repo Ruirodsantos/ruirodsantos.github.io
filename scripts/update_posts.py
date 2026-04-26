@@ -10,7 +10,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 
-MAX_POSTS = 3
+MAX_POSTS = 5
 POSTS_DIR = "_posts"
 ASSET_CACHE_DIR = "assets/cache"
 USER_AGENT = "ai-blog-bot/5.0"
