@@ -16,7 +16,7 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}"/>
   <meta property="og:site_name" content="AI Pulse"/>
-  <meta property="og:title" content="{{ page.title | default: site.title }} ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ AI Pulse"/>
+  <meta property="og:title" content="{{ page.title | default: site.title }} ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ AI Pulse"/>
   {% if page.excerpt %}<meta property="og:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta property="og:description" content="{{ site.description }}"/>{% endif %}
   <meta property="og:url" content="https://ruirodsantos.github.io{{ page.url }}"/>
   {% if page.image %}<meta property="og:image" content="{{ page.image }}"/>{% endif %}
@@ -24,7 +24,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:site" content="@aipulse"/>
-  <meta name="twitter:title" content="{{ page.title | default: site.title }} ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ AI Pulse"/>
+  <meta name="twitter:title" content="{{ page.title | default: site.title }} ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ AI Pulse"/>
   {% if page.excerpt %}<meta name="twitter:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta name="twitter:description" content="{{ site.description }}"/>{% endif %}
   {% if page.image %}<meta name="twitter:image" content="{{ page.image }}"/>{% endif %}
   <!-- Schema.org WebSite -->
@@ -237,23 +237,23 @@
     /* Stock panel fills left column completely */
     .ai-market-panel{background:#fff;border:1px solid #e8eaed;border-radius:10px;padding:20px;box-sizing:border-box}
     .ai-market-stocks{display:flex;flex-direction:column;gap:0}
-    .ai-stock-row{display:grid;grid-template-columns:52px 1fr 120px 72px 68px;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0;gap:10px}
+    .ai-stock-row{display:grid;grid-template-columns:64px 180px 1fr 90px 80px;align-items:center;padding:11px 0;border-bottom:1px solid #f0f0f0;gap:16px}
     .ai-stock-row:last-child{border-bottom:none}
-    .ai-stock-name{font-weight:700;font-size:13px;color:#1a1a2e;font-family:monospace}
-    .ai-stock-meta{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .ai-stock-bar{background:#f0f0f0;border-radius:4px;height:6px;overflow:hidden;width:100%}
-    .ai-stock-bar-fill{display:block;height:100%;border-radius:4px;background:#ccc;transition:width .5s ease}
-    .ai-stock-bar-fill.up{background:linear-gradient(90deg,#00c851,#00a040)}
-    .ai-stock-bar-fill.down{background:linear-gradient(90deg,#ff4444,#cc0000)}
-    .ai-stock-price{font-size:14px;font-weight:600;color:#1a1a2e;text-align:right}
-    .ai-stock-change{font-size:12px;font-weight:600;padding:3px 7px;border-radius:20px;text-align:center;white-space:nowrap}
+    .ai-stock-name{font-weight:800;font-size:14px;color:#1a1a2e;font-family:monospace;letter-spacing:.02em}
+    .ai-stock-meta{font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ai-stock-bar{background:#e8e8e8;border-radius:6px;height:8px;overflow:hidden;width:100%}
+    .ai-stock-bar-fill{display:block;height:100%;border-radius:6px;width:0%;transition:width .8s ease}
+    .ai-stock-bar-fill.up{background:linear-gradient(90deg,#43a047,#00c853)}
+    .ai-stock-bar-fill.down{background:linear-gradient(90deg,#e53935,#ff5252)}
+    .ai-stock-price{font-size:15px;font-weight:700;color:#1a1a2e;text-align:right;font-family:monospace}
+    .ai-stock-change{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;text-align:center;white-space:nowrap}
     .ai-stock-change.up{background:#e8f5e9;color:#2e7d32}
     .ai-stock-change.down{background:#ffebee;color:#c62828}
     /* Ad box right column */
     .square-ad-box{background:#f8f9fa;border:1px dashed #ccc;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;min-height:290px}
     .square-ad-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#aaa;margin:0 0 6px}
     .square-ad-inner{width:300px;height:250px;background:#e8e8e8;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:12px;border-radius:4px}
-    .square-ad-inner::after{content:'300 Ã 250'}
+    .square-ad-inner::after{content:'300 ÃÂ 250'}
     @media(max-width:900px){.below-hero-row{grid-template-columns:1fr}}
     </style>
 </head>
@@ -330,7 +330,7 @@
   </footer>
 
   <script>
-  // Category filtering ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ works on ALL pages
+  // Category filtering ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ works on ALL pages
   function initCats(){
     document.querySelectorAll('.cat-link').forEach(link=>{
       link.addEventListener('click',e=>{
