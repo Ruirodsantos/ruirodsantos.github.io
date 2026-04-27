@@ -196,7 +196,7 @@ title: AI Pulse - Daily AI news that makes sense
     </div>
     <div class="content-with-sidebar">
       <div class="grid-3 grid-auto">
-        {% for post in rest limit:12 %}
+        {% for post in rest limit:24 %}
         <a class="grid-card grid-card-auto post-item" href="{{ post.url | relative_url }}" data-cat="all" data-title="{{ post.title | downcase }}">
           <div class="grid-img grid-img-short" style="background-image:url('{{ post.image }}')"></div>
           <div class="grid-body">
