@@ -59,50 +59,59 @@ title: AI Pulse - Daily AI news that makes sense
         </a>
         {% endfor %}
 
-        <!-- AI MARKET INFO PANEL (replaces ad slot) -->
-        <div class="ai-market-panel">
-          <div class="ai-market-header">
-            <span class="ai-market-title">AI Market Pulse</span>
-            <span class="ai-market-live">&#9679; Live</span>
-          </div>
-          <div class="ai-market-stocks" id="ai-stocks">
-            <div class="ai-stock-row">
-              <span class="ai-stock-name">NVDA</span>
-              <span class="ai-stock-price" id="s-nvda">Loading...</span>
-              <span class="ai-stock-change" id="c-nvda"></span>
-            </div>
-            <div class="ai-stock-row">
-              <span class="ai-stock-name">MSFT</span>
-              <span class="ai-stock-price" id="s-msft">Loading...</span>
-              <span class="ai-stock-change" id="c-msft"></span>
-            </div>
-            <div class="ai-stock-row">
-              <span class="ai-stock-name">GOOGL</span>
-              <span class="ai-stock-price" id="s-googl">Loading...</span>
-              <span class="ai-stock-change" id="c-googl"></span>
-            </div>
-            <div class="ai-stock-row">
-              <span class="ai-stock-name">META</span>
-              <span class="ai-stock-price" id="s-meta">Loading...</span>
-              <span class="ai-stock-change" id="c-meta"></span>
-            </div>
-            <div class="ai-stock-row">
-              <span class="ai-stock-name">AMZN</span>
-              <span class="ai-stock-price" id="s-amzn">Loading...</span>
-              <span class="ai-stock-change" id="c-amzn"></span>
-            </div>
-          </div>
-          <div class="ai-market-divider"></div>
-          <div class="ai-fact-box">
-            <p class="ai-fact-label">AI Fact of the Day</p>
-            <p class="ai-fact-text" id="ai-fact">Loading...</p>
-          </div>
-          <div class="ai-market-footer">Data delayed 15 min &middot; <a href="https://finance.yahoo.com" target="_blank" rel="noopener">Yahoo Finance</a></div>
-        </div>
 
       </div>
     </div>
 
+
+    <!-- BELOW HERO: Square Ad + Stock Market Panel -->
+    <div class="below-hero-row">
+      <!-- Square Ad Space 300x250 -->
+      <div class="square-ad-box">
+        <div class="ad-label">Advertisement</div>
+        <div class="square-ad-inner"></div>
+      </div>
+      <!-- AI Market Pulse -->
+      <div class="ai-market-panel">
+        <div class="ai-market-header">
+          <span class="ai-market-title">AI Market Pulse</span>
+          <span class="ai-market-live">&#9679; Live</span>
+        </div>
+        <div class="ai-market-stocks" id="ai-stocks">
+          <div class="ai-stock-row">
+            <span class="ai-stock-name">NVDA</span>
+            <span class="ai-stock-price" id="s-nvda">—</span>
+            <span class="ai-stock-change" id="c-nvda"></span>
+          </div>
+          <div class="ai-stock-row">
+            <span class="ai-stock-name">MSFT</span>
+            <span class="ai-stock-price" id="s-msft">—</span>
+            <span class="ai-stock-change" id="c-msft"></span>
+          </div>
+          <div class="ai-stock-row">
+            <span class="ai-stock-name">GOOGL</span>
+            <span class="ai-stock-price" id="s-googl">—</span>
+            <span class="ai-stock-change" id="c-googl"></span>
+          </div>
+          <div class="ai-stock-row">
+            <span class="ai-stock-name">META</span>
+            <span class="ai-stock-price" id="s-meta">—</span>
+            <span class="ai-stock-change" id="c-meta"></span>
+          </div>
+          <div class="ai-stock-row">
+            <span class="ai-stock-name">AMZN</span>
+            <span class="ai-stock-price" id="s-amzn">—</span>
+            <span class="ai-stock-change" id="c-amzn"></span>
+          </div>
+        </div>
+        <div class="ai-market-divider"></div>
+        <div class="ai-fact-box">
+          <p class="ai-fact-label">AI Fact of the Day</p>
+          <p class="ai-fact-text" id="ai-fact">Loading...</p>
+        </div>
+        <div class="ai-market-footer">Data delayed 15 min &middot; <a href="https://finance.yahoo.com" target="_blank" rel="noopener">Yahoo Finance</a></div>
+      </div>
+    </div>
     <!-- LATEST 3 STORIES -->
     {% if s1 or s2 or s3 %}
     <div class="section-header">
@@ -248,72 +257,36 @@ const stocks = [
   {id:'amzn',  sym:'AMZN'}
 ];
 async function loadStocks(){
+  const stocks=[
+    {id:'nvda',sym:'NVDA'},
+    {id:'msft',sym:'MSFT'},
+    {id:'googl',sym:'GOOGL'},
+    {id:'meta',sym:'META'},
+    {id:'amzn',sym:'AMZN'}
+  ];
   for(const s of stocks){
     try{
-      const url = 'https://query1.finance.yahoo.com/v8/finance/chart/'+s.sym+'?interval=1d&range=2d';
-      const proxy = 'https://api.allorigins.win/get?url='+encodeURIComponent(url);
-      const r = await fetch(proxy);
-      const raw = await r.json();
-      const d2 = JSON.parse(raw.contents);
-      const meta = d2.chart.result[0].meta;
-      const price = meta.regularMarketPrice;
-      const prev  = meta.chartPreviousClose || meta.previousClose;
-      const chg   = price - prev;
-      const pct   = ((chg/prev)*100).toFixed(2);
-      const up    = chg >= 0;
-      document.getElementById('s-'+s.id).textContent = '
-
-// Rotate AI facts
-const facts=[
-  'The global AI market is projected to reach $1.8 trillion by 2030.',
-  'ChatGPT reached 100 million users in just 2 months - the fastest app ever.',
-  'NVIDIA supplies over 80% of AI training chips worldwide.',
-  'Over 77% of devices currently use AI in some form.',
-  'AI could contribute up to $15.7 trillion to the global economy by 2030.',
-  'The average AI startup raised $22M in seed funding in 2024.',
-  'Google processes 8.5 billion searches per day - most now AI-assisted.',
-  'There are now over 70,000 AI startups globally.',
-  'AI is expected to automate 40% of work tasks by 2035.',
-  'OpenAI was valued at $157 billion in its latest funding round.'
-];
-const factEl = document.getElementById('ai-fact');
-if(factEl){
-  const today = new Date().getDate();
-  factEl.textContent = facts[today % facts.length];
-}
-
-// Category filtering
-document.querySelectorAll('.cat-link').forEach(link=>{
-  link.addEventListener('click',e=>{
-    e.preventDefault();
-    const cat=link.dataset.cat;
-    document.querySelectorAll('.cat-link').forEach(l=>l.classList.remove('active'));
-    link.classList.add('active');
-    const items=document.querySelectorAll('.post-item');
-    if(!items.length){window.location.href='/?cat='+cat;return;}
-    const kw={all:[],tools:['tool','gpt','claude','gemini','copilot','app','model','api','chatbot','assistant','software','platform'],business:['business','startup','company','market','revenue','funding','enterprise','saas','product'],money:['money','earn','income','salary','job','freelance','profit','cost','price','pay','wage'],bigtech:['google','meta','microsoft','apple','amazon','openai','anthropic','nvidia','tesla'],startups:['startup','founder','seed','series','venture','raise','funding','launch'],research:['research','study','paper','university','lab','science','discover','arxiv','academic'],policy:['law','regulation','policy','government','eu','congress','bill','rule','ban','legal','privacy']};
-    const keys=kw[cat]||[];
-    items.forEach(item=>{
-      if(cat==='all'){item.classList.remove('hidden');return;}
-      const title=(item.dataset.title||item.querySelector('.grid-title,.hero-title')?.textContent||'').toLowerCase();
-      keys.some(k=>title.includes(k))?item.classList.remove('hidden'):item.classList.add('hidden');
-    });
-    window.scrollTo({top:0,behavior:'smooth'});
-  });
-});
-
-function subscribeNewsletter(){
-  const email=document.getElementById('nl-email').value.trim();
-  if(!email||!email.includes('@')){alert('Please enter a valid email.');return;}
-  document.getElementById('nl-email').value='';
-  document.getElementById('nl-msg').style.display='block';
-}
-</script>+price.toFixed(2);
-      const cel = document.getElementById('c-'+s.id);
-      cel.textContent = (up?'+':'')+pct+'%';
-      cel.className = 'ai-stock-change '+(up?'up':'down');
-    } catch(e){
-      document.getElementById('s-'+s.id).textContent = '--';
+      const url='https://query1.finance.yahoo.com/v8/finance/chart/'+s.sym+'?interval=1d&range=2d';
+      const proxy='https://api.allorigins.win/get?url='+encodeURIComponent(url);
+      const r=await fetch(proxy);
+      const raw=await r.json();
+      const d2=JSON.parse(raw.contents);
+      const meta=d2.chart.result[0].meta;
+      const price=meta.regularMarketPrice;
+      const prev=meta.chartPreviousClose||meta.previousClose;
+      const chg=price-prev;
+      const pct=((chg/prev)*100).toFixed(2);
+      const up=chg>=0;
+      const priceEl=document.getElementById('s-'+s.id);
+      const chgEl=document.getElementById('c-'+s.id);
+      if(priceEl) priceEl.textContent='$'+price.toFixed(2);
+      if(chgEl){
+        chgEl.textContent=(up?'+':'')+pct+'%';
+        chgEl.className='ai-stock-change '+(up?'up':'down');
+      }
+    }catch(e){
+      const priceEl=document.getElementById('s-'+s.id);
+      if(priceEl) priceEl.textContent='N/A';
     }
   }
 }
