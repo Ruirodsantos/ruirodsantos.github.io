@@ -264,6 +264,7 @@ async function loadStocks(){
     {id:'meta',sym:'META'},
     {id:'amzn',sym:'AMZN'}
   ];
+  const results=[];
   for(const s of stocks){
     try{
       const url='https://query1.finance.yahoo.com/v8/finance/chart/'+s.sym+'?interval=1d&range=2d';
@@ -275,13 +276,61 @@ async function loadStocks(){
       const price=meta.regularMarketPrice;
       const prev=meta.chartPreviousClose||meta.previousClose;
       const chg=price-prev;
-      const pct=((chg/prev)*100).toFixed(2);
+      const pct=parseFloat(((chg/prev)*100).toFixed(2));
       const up=chg>=0;
+      results.push({id:s.id, pct, up});
       const priceEl=document.getElementById('s-'+s.id);
       const chgEl=document.getElementById('c-'+s.id);
-      if(priceEl) priceEl.textContent='$'+price.toFixed(2);
+      if(priceEl) priceEl.textContent='
+
+// Rotate AI facts
+const facts=[
+  'The global AI market is projected to reach $1.8 trillion by 2030.',
+  'ChatGPT reached 100 million users in just 2 months - the fastest app ever.',
+  'NVIDIA supplies over 80% of AI training chips worldwide.',
+  'Over 77% of devices currently use AI in some form.',
+  'AI could contribute up to $15.7 trillion to the global economy by 2030.',
+  'The average AI startup raised $22M in seed funding in 2024.',
+  'Google processes 8.5 billion searches per day - most now AI-assisted.',
+  'There are now over 70,000 AI startups globally.',
+  'AI is expected to automate 40% of work tasks by 2035.',
+  'OpenAI was valued at $157 billion in its latest funding round.'
+];
+const factEl = document.getElementById('ai-fact');
+if(factEl){
+  const today = new Date().getDate();
+  factEl.textContent = facts[today % facts.length];
+}
+
+// Category filtering
+document.querySelectorAll('.cat-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const cat=link.dataset.cat;
+    document.querySelectorAll('.cat-link').forEach(l=>l.classList.remove('active'));
+    link.classList.add('active');
+    const items=document.querySelectorAll('.post-item');
+    if(!items.length){window.location.href='/?cat='+cat;return;}
+    const kw={all:[],tools:['tool','gpt','claude','gemini','copilot','app','model','api','chatbot','assistant','software','platform'],business:['business','startup','company','market','revenue','funding','enterprise','saas','product'],money:['money','earn','income','salary','job','freelance','profit','cost','price','pay','wage'],bigtech:['google','meta','microsoft','apple','amazon','openai','anthropic','nvidia','tesla'],startups:['startup','founder','seed','series','venture','raise','funding','launch'],research:['research','study','paper','university','lab','science','discover','arxiv','academic'],policy:['law','regulation','policy','government','eu','congress','bill','rule','ban','legal','privacy']};
+    const keys=kw[cat]||[];
+    items.forEach(item=>{
+      if(cat==='all'){item.classList.remove('hidden');return;}
+      const title=(item.dataset.title||item.querySelector('.grid-title,.hero-title')?.textContent||'').toLowerCase();
+      keys.some(k=>title.includes(k))?item.classList.remove('hidden'):item.classList.add('hidden');
+    });
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+
+function subscribeNewsletter(){
+  const email=document.getElementById('nl-email').value.trim();
+  if(!email||!email.includes('@')){alert('Please enter a valid email.');return;}
+  document.getElementById('nl-email').value='';
+  document.getElementById('nl-msg').style.display='block';
+}
+</script>+price.toFixed(2);
       if(chgEl){
-        chgEl.textContent=(up?'+':'')+pct+'%';
+        chgEl.textContent=(up?'+':'')+pct.toFixed(2)+'%';
         chgEl.className='ai-stock-change '+(up?'up':'down');
       }
     }catch(e){
@@ -289,6 +338,16 @@ async function loadStocks(){
       if(priceEl) priceEl.textContent='N/A';
     }
   }
+  // Animate progress bars proportionally to max absolute pct
+  const maxAbs=Math.max(...results.map(r=>Math.abs(r.pct)),0.1);
+  results.forEach(r=>{
+    const bar=document.getElementById('b-'+r.id);
+    if(bar){
+      const w=Math.min((Math.abs(r.pct)/maxAbs)*100,100);
+      bar.className='ai-stock-bar-fill '+(r.up?'up':'down');
+      setTimeout(()=>bar.style.width=w+'%',100);
+    }
+  });
 }
 loadStocks();
 
