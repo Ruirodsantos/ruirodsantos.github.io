@@ -2,8 +2,9 @@ name: Auto-update blog posts
 
 on:
   schedule:
-    - cron: '0 3 * * *'
-  workflow_dispatch: {}
+    - cron: '0 3 * * *'   # 07:00 Dubai (UTC+4) — primary
+    - cron: '0 4 * * *'   # 08:00 Dubai (UTC+4) — fallback if primary skipped
+  workflow_dispatch: {}    # manual trigger
 
 permissions:
   contents: write
@@ -42,11 +43,11 @@ jobs:
       - name: Commit & push
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add _posts/ assets/
           if git diff --cached --quiet; then
-            echo "No changes."
+            echo "No new posts today"
           else
-            git commit -m "auto: daily AI posts"
+            git commit -m "chore: daily news update $(date -u +'%Y-%m-%d %H:%M UTC')"
             git push
           fi
