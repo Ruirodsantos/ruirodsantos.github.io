@@ -1,6 +1,6 @@
 ---
 layout: default
-title: AI Pulse — Daily AI news that makes sense
+title: AI Pulse - Daily AI news that makes sense
 ---
 {% assign posts = site.posts %}
 {% assign hero = posts[0] %}
@@ -11,20 +11,28 @@ title: AI Pulse — Daily AI news that makes sense
 
 <div class="page-wrap">
   <div class="ad-banner">Advertisement</div>
-  <div class="value-bar">
-    <div class="value-bar-inner">
-      <span class="value-item"><span class="value-dot"></span>Plain English</span>
-      <span class="value-item"><span class="value-dot"></span>Make Money</span>
-      <span class="value-item"><span class="value-dot"></span>Daily Updates</span>
-      <span class="value-item"><span class="value-dot"></span>Free Forever</span>
-      <span class="value-item"><span class="value-dot"></span>No Paywall</span>
+
+  <!-- SCROLLING NEWS TICKER -->
+  <div class="news-ticker-wrap">
+    <div class="news-ticker-label">Latest</div>
+    <div class="news-ticker-track">
+      <div class="news-ticker-inner" id="ticker-inner">
+        {% for post in posts limit:10 %}
+        <a href="{{ post.url | relative_url }}" class="ticker-item">{{ post.title }}</a>
+        <span class="ticker-sep">&bull;</span>
+        {% endfor %}
+        {% for post in posts limit:10 %}
+        <a href="{{ post.url | relative_url }}" class="ticker-item">{{ post.title }}</a>
+        <span class="ticker-sep">&bull;</span>
+        {% endfor %}
+      </div>
     </div>
   </div>
 
   {% if hero %}
   <div class="newspaper">
 
-    <!-- HERO + TRENDING SIDEBAR -->
+    <!-- HERO + TRENDING -->
     <div class="hero-row">
       <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="all">
         <div class="hero-img" style="background-image:url('{{ hero.image }}')">
@@ -50,16 +58,16 @@ title: AI Pulse — Daily AI news that makes sense
       </div>
     </div>
 
-    <!-- 3 SECONDARY CARDS BELOW HERO (fills the empty space) -->
+    <!-- 3 LATEST CARDS -->
     {% if s1 or s2 or s3 %}
     <div class="section-header">
       <div class="section-header-accent"></div>
       <span class="section-header-title">Latest Stories</span>
       <div class="section-header-line"></div>
     </div>
-    <div class="grid-3" style="margin-bottom:20px">
+    <div class="grid-3 grid-auto" style="margin-bottom:20px">
       {% if s1 %}
-      <a class="grid-card post-item" href="{{ s1.url | relative_url }}" data-cat="all">
+      <a class="grid-card grid-card-auto post-item" href="{{ s1.url | relative_url }}" data-cat="all">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s1.image }}')"></div>
         <div class="grid-body">
           <p class="grid-cat">AI &amp; Technology</p>
@@ -70,7 +78,7 @@ title: AI Pulse — Daily AI news that makes sense
       </a>
       {% endif %}
       {% if s2 %}
-      <a class="grid-card post-item" href="{{ s2.url | relative_url }}" data-cat="all">
+      <a class="grid-card grid-card-auto post-item" href="{{ s2.url | relative_url }}" data-cat="all">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s2.image }}')"></div>
         <div class="grid-body">
           <p class="grid-cat">AI &amp; Technology</p>
@@ -81,7 +89,7 @@ title: AI Pulse — Daily AI news that makes sense
       </a>
       {% endif %}
       {% if s3 %}
-      <a class="grid-card post-item" href="{{ s3.url | relative_url }}" data-cat="all">
+      <a class="grid-card grid-card-auto post-item" href="{{ s3.url | relative_url }}" data-cat="all">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s3.image }}')"></div>
         <div class="grid-body">
           <p class="grid-cat">AI &amp; Technology</p>
@@ -99,11 +107,9 @@ title: AI Pulse — Daily AI news that makes sense
       <div class="earnapp-body">
         <div class="earnapp-tag">Passive Income Opportunity</div>
         <h2 class="earnapp-title">Earn money from your unused internet</h2>
-        <p class="earnapp-sub">EarnApp pays you for sharing your unused bandwidth — no effort required. Install once, run in the background, get paid monthly via PayPal or gift cards. Completely free to join.</p>
+        <p class="earnapp-sub">EarnApp pays you for sharing your unused bandwidth - no effort required. Install once, run in the background, get paid monthly via PayPal or gift cards.</p>
       </div>
-      <a class="earnapp-cta" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">
-        Start earning free<small>Join via our link</small>
-      </a>
+      <a class="earnapp-cta" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">Start earning free<small>Join via our link</small></a>
     </div>
 
     <!-- NEWSLETTER -->
@@ -128,14 +134,14 @@ title: AI Pulse — Daily AI news that makes sense
       <div class="section-header-line"></div>
     </div>
     <div class="content-with-sidebar">
-      <div class="grid-3">
+      <div class="grid-3 grid-auto">
         {% for post in rest limit:12 %}
-        <a class="grid-card post-item" href="{{ post.url | relative_url }}" data-cat="all">
+        <a class="grid-card grid-card-auto post-item" href="{{ post.url | relative_url }}" data-cat="all" data-title="{{ post.title | downcase }}">
           <div class="grid-img grid-img-short" style="background-image:url('{{ post.image }}')"></div>
           <div class="grid-body">
             <p class="grid-cat">AI &amp; Technology</p>
-            <p class="grid-title">{{ post.title | truncate: 60 }}</p>
-            <p class="grid-excerpt">{{ post.excerpt | truncate: 75 }}</p>
+            <p class="grid-title">{{ post.title | truncate: 65 }}</p>
+            <p class="grid-excerpt">{{ post.excerpt | truncate: 80 }}</p>
             <p class="grid-meta">{{ post.date | date: "%b %d, %Y" }}</p>
           </div>
         </a>
@@ -151,10 +157,10 @@ title: AI Pulse — Daily AI news that makes sense
         <div class="post-sidebar-widget">
           <p class="post-sidebar-widget-title">Quick Reads</p>
           {% for post in posts limit:5 offset:3 %}
-          <div class="list-card">
+          <a class="list-card" href="{{ post.url | relative_url }}" style="display:grid">
             <div class="list-img" style="background-image:url('{{ post.image }}')"></div>
             <div><p class="list-title">{{ post.title | truncate: 55 }}</p><p class="list-meta">{{ post.date | date: "%b %d" }}</p></div>
-          </div>
+          </a>
           {% endfor %}
         </div>
         <div class="earnapp-box" style="margin-top:14px;padding:18px;flex-direction:column;gap:12px">
@@ -172,7 +178,60 @@ title: AI Pulse — Daily AI news that makes sense
   <div class="empty-state"><p>First stories arriving soon. Check back shortly.</p></div>
   {% endif %}
 </div>
+
 <script>
+// Scrolling ticker
+(function(){
+  const inner = document.getElementById('ticker-inner');
+  if(!inner) return;
+  let pos = 0;
+  const speed = 0.5;
+  let paused = false;
+  inner.parentElement.addEventListener('mouseenter',()=>paused=true);
+  inner.parentElement.addEventListener('mouseleave',()=>paused=false);
+  function tick(){
+    if(!paused){
+      pos -= speed;
+      const half = inner.scrollWidth / 2;
+      if(Math.abs(pos) >= half) pos = 0;
+      inner.style.transform = 'translateX('+pos+'px)';
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+// Category filtering by keyword matching
+document.querySelectorAll('.cat-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const cat = link.dataset.cat;
+    document.querySelectorAll('.cat-link').forEach(l=>l.classList.remove('active'));
+    link.classList.add('active');
+    const items = document.querySelectorAll('.post-item');
+    if(items.length === 0){ window.location.href = '/?cat='+cat; return; }
+    const keywords = {
+      all: [],
+      tools: ['tool','gpt','claude','gemini','copilot','app','model','api','plugin','chatbot','assistant','software','platform'],
+      business: ['business','startup','company','market','revenue','funding','invest','enterprise','b2b','saas','product'],
+      money: ['money','earn','income','salary','job','freelance','revenue','profit','cost','price','pay','wage','rich'],
+      bigtech: ['google','meta','microsoft','apple','amazon','openai','anthropic','nvidia','tesla','twitter','x.com','facebook'],
+      startups: ['startup','founder','seed','series','venture','raise','funding','launch','new company','vc'],
+      research: ['research','study','paper','university','lab','science','discover','breakthrough','arxiv','academic'],
+      policy: ['law','regulation','policy','government','eu','congress','senate','bill','rule','ban','legal','privacy','gdpr']
+    };
+    const kws = keywords[cat] || [];
+    items.forEach(item=>{
+      if(cat==='all'){ item.classList.remove('hidden'); return; }
+      const title = (item.dataset.title||item.querySelector('.grid-title,.hero-title,.sidebar-title-text')?.textContent||'').toLowerCase();
+      const matches = kws.some(k=>title.includes(k));
+      if(matches){ item.classList.remove('hidden'); }
+      else{ item.classList.add('hidden'); }
+    });
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+
 function subscribeNewsletter(){
   const email=document.getElementById('nl-email').value.trim();
   if(!email||!email.includes('@')){alert('Please enter a valid email.');return;}
