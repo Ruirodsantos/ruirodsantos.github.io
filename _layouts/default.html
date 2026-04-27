@@ -16,7 +16,7 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}"/>
   <meta property="og:site_name" content="AI Pulse"/>
-  <meta property="og:title" content="{{ page.title | default: site.title }} â AI Pulse"/>
+  <meta property="og:title" content="{{ page.title | default: site.title }} Ã¢ÂÂ AI Pulse"/>
   {% if page.excerpt %}<meta property="og:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta property="og:description" content="{{ site.description }}"/>{% endif %}
   <meta property="og:url" content="https://ruirodsantos.github.io{{ page.url }}"/>
   {% if page.image %}<meta property="og:image" content="{{ page.image }}"/>{% endif %}
@@ -24,7 +24,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:site" content="@aipulse"/>
-  <meta name="twitter:title" content="{{ page.title | default: site.title }} â AI Pulse"/>
+  <meta name="twitter:title" content="{{ page.title | default: site.title }} Ã¢ÂÂ AI Pulse"/>
   {% if page.excerpt %}<meta name="twitter:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta name="twitter:description" content="{{ site.description }}"/>{% endif %}
   {% if page.image %}<meta name="twitter:image" content="{{ page.image }}"/>{% endif %}
   <!-- Schema.org WebSite -->
@@ -213,7 +213,21 @@
     .footer-badge{font-size:10px;font-weight:600;color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.12);padding:3px 8px;border-radius:4px}
     .empty-state{text-align:center;padding:60px 16px;color:var(--gray-400)}
     .post-item.hidden{display:none}
-  </style>
+  
+    /* Scrolling news ticker */
+    .news-ticker-wrap{display:flex;align-items:center;border-top:1px solid var(--gray-200);border-bottom:1px solid var(--gray-200);background:#fff;overflow:hidden;height:36px;gap:0}
+    .news-ticker-label{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);background:var(--green);padding:0 14px;height:100%;display:flex;align-items:center;white-space:nowrap;flex-shrink:0}
+    .news-ticker-track{flex:1;overflow:hidden;position:relative;height:100%}
+    .news-ticker-inner{display:flex;align-items:center;gap:0;white-space:nowrap;will-change:transform;height:100%}
+    .ticker-item{font-size:13px;font-weight:500;color:var(--gray-800);padding:0 8px;white-space:nowrap;transition:color .15s}
+    .ticker-item:hover{color:var(--green-dark)}
+    .ticker-sep{color:var(--gray-400);padding:0 4px;font-size:12px}
+    /* Auto-height grid cards - no stretching */
+    .grid-auto{align-items:start}
+    .grid-card-auto{align-self:start;height:auto}
+    /* Remove value bar */
+    .value-bar{display:none}
+    </style>
 </head>
 <body>
   <div class="topbar">
@@ -288,7 +302,7 @@
   </footer>
 
   <script>
-  // Category filtering Ã¢ÂÂ works on ALL pages
+  // Category filtering ÃÂ¢ÃÂÃÂ works on ALL pages
   function initCats(){
     document.querySelectorAll('.cat-link').forEach(link=>{
       link.addEventListener('click',e=>{
