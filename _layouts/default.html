@@ -16,7 +16,7 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="{% if page.layout == 'post' %}article{% else %}website{% endif %}"/>
   <meta property="og:site_name" content="AI Pulse"/>
-  <meta property="og:title" content="{{ page.title | default: site.title }} ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ AI Pulse"/>
+  <meta property="og:title" content="{{ page.title | default: site.title }} ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ AI Pulse"/>
   {% if page.excerpt %}<meta property="og:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta property="og:description" content="{{ site.description }}"/>{% endif %}
   <meta property="og:url" content="https://ruirodsantos.github.io{{ page.url }}"/>
   {% if page.image %}<meta property="og:image" content="{{ page.image }}"/>{% endif %}
@@ -24,7 +24,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:site" content="@aipulse"/>
-  <meta name="twitter:title" content="{{ page.title | default: site.title }} ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ AI Pulse"/>
+  <meta name="twitter:title" content="{{ page.title | default: site.title }} ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ AI Pulse"/>
   {% if page.excerpt %}<meta name="twitter:description" content="{{ page.excerpt | strip_html | truncate: 160 }}"/>{% else %}<meta name="twitter:description" content="{{ site.description }}"/>{% endif %}
   {% if page.image %}<meta name="twitter:image" content="{{ page.image }}"/>{% endif %}
   <!-- Schema.org WebSite -->
@@ -246,6 +246,14 @@
     .ai-fact-text{font-size:12px;color:var(--gray-600);line-height:1.5;font-style:italic}
     .ai-market-footer{font-size:10px;color:var(--gray-400);margin-top:8px;text-align:right}
     .ai-market-footer a{color:var(--gray-400);text-decoration:underline}
+    
+    /* Below-hero row: Square Ad + Stock Panel */
+    .below-hero-row{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-bottom:24px;align-items:start}
+    .square-ad-box{background:#f8f9fa;border:1px dashed #ccc;border-radius:8px;overflow:hidden;text-align:center}
+    .square-ad-box .ad-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#aaa;padding:6px 0 2px}
+    .square-ad-inner{width:300px;height:250px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:13px}
+    .square-ad-inner::after{content:'300 × 250'}
+    @media(max-width:768px){.below-hero-row{grid-template-columns:1fr}}
     </style>
 </head>
 <body>
@@ -321,7 +329,7 @@
   </footer>
 
   <script>
-  // Category filtering ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ works on ALL pages
+  // Category filtering ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ works on ALL pages
   function initCats(){
     document.querySelectorAll('.cat-link').forEach(link=>{
       link.addEventListener('click',e=>{
