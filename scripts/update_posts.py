@@ -10,7 +10,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY")
 
-MAX_POSTS = 5
+MAX_POSTS = 8
 POSTS_DIR = "_posts"
 ASSET_CACHE_DIR = "assets/cache"
 USER_AGENT = "ai-blog-bot/5.0"
@@ -163,12 +163,27 @@ def make_filename(title):
     return os.path.join(POSTS_DIR, date_part + "-" + slug + ".md")
 
 
+def slug_exists_any_date(title):
+    """Return True if a post with this title slug already exists on any date."""
+    slug = slugify(title)[:80] or "post"
+    if not os.path.isdir(POSTS_DIR):
+        return False
+    for fname in os.listdir(POSTS_DIR):
+        # filenames are YYYY-MM-DD-slug.md — strip date prefix and .md suffix
+        parts = fname.split("-", 3)
+        if len(parts) == 4:
+            existing_slug = parts[3].replace(".md", "")
+            if existing_slug == slug:
+                return True
+    return False
+
+
 def write_post(article, body, image_url):
     ensure_dir(POSTS_DIR)
-    path = make_filename(article["title"])
-    if os.path.exists(path):
-        dbg("Skip: " + os.path.basename(path))
+    if slug_exists_any_date(article["title"]):
+        dbg("Dup slug, skip: " + article["title"][:60])
         return None
+    path = make_filename(article["title"])
     with open(path, "w", encoding="utf-8") as f:
         f.write(build_post(article, body, image_url))
     dbg("Written: " + path)
