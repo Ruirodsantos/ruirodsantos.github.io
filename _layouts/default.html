@@ -1,0 +1,4 @@
+
+<script id="post-idx" type="application/json">
+[{% for post in site.posts %}{"u":"{{ post.url | relative_url }}","t":{{ post.title | jsonify }},"d":"{{ post.date | date: "%b %d, %Y" }}","c":"{{ post.categories | first | default: "ai" }}","i":"{{ post.image }}"}{% unless forloop.last %},{% endunless %}{% endfor %}]
+</script>
