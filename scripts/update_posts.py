@@ -141,6 +141,25 @@ def generate_post(article):
     return None
 
 
+def get_category(text):
+    t = text.lower()
+    if any(w in t for w in ["invest","stock","market","fund","revenue","profit","ipo","valuation","billion","acquisition","deal","merger"]):
+        return "categories: [business]"
+    if any(w in t for w in ["earn","income","salary","job","freelance","passive","side hustle","pay","wage"]):
+        return "categories: [money]"
+    if any(w in t for w in ["regulation","law","policy","government","congress","senate","ban","rule","legislation","antitrust"]):
+        return "categories: [policy]"
+    if any(w in t for w in ["startup","founder","venture","seed","series","raise","funding","pitch"]):
+        return "categories: [startups]"
+    if any(w in t for w in ["research","paper","study","benchmark","dataset","training","architecture","university","lab"]):
+        return "categories: [research]"
+    if any(w in t for w in ["robot","hardware","chip","gpu","device","phone","autonomous","vehicle","sensor"]):
+        return "categories: [bigtech]"
+    if any(w in t for w in ["tool","app","plugin","api","agent","assistant","feature","launch","release","update"]):
+        return "categories: [tools]"
+    return "categories: [ai]"
+
+
 def build_post(article, body, image_url):
     today = datetime.now(timezone.utc).date().isoformat()
     lines = [
@@ -149,7 +168,7 @@ def build_post(article, body, image_url):
         'title: "' + yml_safe(article["title"]) + '"',
         "date: " + today,
         'excerpt: "' + yml_safe(shorten(article["description"], 160)) + '"',
-        "categories: [ai, practical]",
+        get_category(article["title"] + " " + article.get("description", "")),
         'image: "' + image_url + '"',
         'source_url: "' + yml_safe(article.get("link", "")) + '"',
         "---",
@@ -169,7 +188,7 @@ def slug_exists_any_date(title):
     if not os.path.isdir(POSTS_DIR):
         return False
     for fname in os.listdir(POSTS_DIR):
-        # filenames are YYYY-MM-DD-slug.md — strip date prefix and .md suffix
+        # filenames are YYYY-MM-DD-slug.md â strip date prefix and .md suffix
         parts = fname.split("-", 3)
         if len(parts) == 4:
             existing_slug = parts[3].replace(".md", "")
