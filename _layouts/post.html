@@ -15,6 +15,18 @@ layout: default
 }
 </script>
 
+<script>
+(function(){
+  const body = document.querySelector('.post-body');
+  const rt = document.getElementById('reading-time');
+  if(body && rt){
+    const words = body.innerText.trim().split(/s+/).length;
+    const mins = Math.max(1, Math.round(words/200));
+    rt.textContent = mins + ' min read';
+  }
+})();
+</script>
+
 {% if page.image %}
 <div class="post-hero-wrap">
   <div class="post-hero-img" style="background-image:url('{{ page.image }}')"></div>
@@ -39,9 +51,29 @@ layout: default
     <div class="post-meta">
       <span>{{ page.date | date: "%B %d, %Y" }}</span>
       <span>&middot;</span>
-      <span>5 min read</span>
+      <span id="reading-time">5 min read</span>
       {% if page.source_url %}<span>&middot;</span><a href="{{ page.source_url }}" target="_blank" rel="noopener" style="color:#28c45e;font-weight:600">Source &#8594;</a>{% endif %}
     </div>
+    
+<style>
+.share-bar{display:flex;align-items:center;gap:8px;margin:16px 0 20px;flex-wrap:wrap}
+.share-label{font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em}
+.share-btn{display:inline-flex;align-items:center;justify-content:center;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;border:none;cursor:pointer;transition:opacity .15s}
+.share-btn:hover{opacity:.8}
+.share-x{background:#000;color:#fff}
+.share-li{background:#0077b5;color:#fff}
+.share-wa{background:#25d366;color:#fff}
+.share-copy{background:#f0f0f0;color:#333;font-size:11px}
+</style>
+
+    <div class="share-bar">
+      <span class="share-label">Share:</span>
+      <a class="share-btn share-x" href="https://twitter.com/intent/tweet?text={{ page.title | uri_escape }}&url={{ page.url | absolute_url | uri_escape }}" target="_blank" rel="noopener" aria-label="Share on X">𝕏</a>
+      <a class="share-btn share-li" href="https://www.linkedin.com/sharing/share-offsite/?url={{ page.url | absolute_url | uri_escape }}" target="_blank" rel="noopener" aria-label="Share on LinkedIn">in</a>
+      <a class="share-btn share-wa" href="https://wa.me/?text={{ page.title | uri_escape }}%20{{ page.url | absolute_url | uri_escape }}" target="_blank" rel="noopener" aria-label="Share on WhatsApp">📱</a>
+      <button class="share-btn share-copy" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='🔗 Copy link',2000)})" aria-label="Copy link">🔗 Copy link</button>
+    </div>
+
     <div class="post-body">{{ content }}</div>
     <div class="post-ad-bottom">
   <ins class="adsbygoogle"
