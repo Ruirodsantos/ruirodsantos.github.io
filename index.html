@@ -36,7 +36,7 @@ title: AI Pulse - Daily AI news that makes sense
     <div class="hero-row">
 
       <!-- LEFT: Big hero card -->
-      <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="all">
+      <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="{{ post.categories | first | default: 'all' }}">
         <div class="hero-img" style="background-image:url('{{ hero.image }}')">
           <div class="hero-overlay"></div>
           <div class="hero-content">
@@ -115,7 +115,7 @@ title: AI Pulse - Daily AI news that makes sense
       <!-- AD 300x250 RIGHT -->
       <div class="square-ad-box">
         <div class="ad-label">Advertisement</div>
-        <div class="square-ad-inner"></div>
+        <ins class="adsbygoogle" style="display:inline-block;width:300px;height:250px" data-ad-client="ca-pub-7715134134171575" data-ad-slot="auto"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
       </div>
 
     </div>
@@ -128,7 +128,7 @@ title: AI Pulse - Daily AI news that makes sense
     </div>
     <div class="grid-3 grid-auto" style="margin-bottom:20px">
       {% if s1 %}
-      <a class="grid-card grid-card-auto post-item" href="{{ s1.url | relative_url }}" data-cat="all">
+      <a class="grid-card grid-card-auto post-item" href="{{ s1.url | relative_url }}" data-cat="{{ s1.categories | first | default: 'all' }}">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s1.image }}')"></div>
         <div class="grid-body">
           <p class="grid-cat">AI &amp; Technology</p>
@@ -139,7 +139,7 @@ title: AI Pulse - Daily AI news that makes sense
       </a>
       {% endif %}
       {% if s2 %}
-      <a class="grid-card grid-card-auto post-item" href="{{ s2.url | relative_url }}" data-cat="all">
+      <a class="grid-card grid-card-auto post-item" href="{{ s2.url | relative_url }}" data-cat="{{ s2.categories | first | default: 'all' }}">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s2.image }}')"></div>
         <div class="grid-body">
           <p class="grid-cat">AI &amp; Technology</p>
@@ -150,7 +150,7 @@ title: AI Pulse - Daily AI news that makes sense
       </a>
       {% endif %}
       {% if s3 %}
-      <a class="grid-card grid-card-auto post-item" href="{{ s3.url | relative_url }}" data-cat="all">
+      <a class="grid-card grid-card-auto post-item" href="{{ s3.url | relative_url }}" data-cat="{{ s3.categories | first | default: 'all' }}">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s3.image }}')"></div>
         <div class="grid-body">
           <p class="grid-cat">AI &amp; Technology</p>
@@ -197,7 +197,7 @@ title: AI Pulse - Daily AI news that makes sense
     <div class="content-with-sidebar">
       <div class="grid-3 grid-auto">
         {% for post in rest limit:24 %}
-        <a class="grid-card grid-card-auto post-item" href="{{ post.url | relative_url }}" data-cat="all" data-title="{{ post.title | downcase }}">
+        <a class="grid-card grid-card-auto post-item" href="{{ post.url | relative_url }}" data-cat="{{ post.categories | first | default: 'all' }}" data-title="{{ post.title | downcase }}">
           <div class="grid-img grid-img-short" style="background-image:url('{{ post.image }}')"></div>
           <div class="grid-body">
             <p class="grid-cat">AI &amp; Technology</p>
