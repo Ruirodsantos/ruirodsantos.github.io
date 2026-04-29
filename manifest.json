@@ -1,0 +1,22 @@
+{
+  "name": "AI Pulse",
+  "short_name": "AI Pulse",
+  "description": "Daily AI news explained simply. No jargon, no hype.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#180d3c",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "news",
+    "technology"
+  ],
+  "lang": "en"
+}
