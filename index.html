@@ -131,7 +131,7 @@ title: AI Pulse - Daily AI news that makes sense
       <a class="grid-card grid-card-auto post-item" href="{{ s1.url | relative_url }}" data-cat="{{ s1.categories | first | default: 'all' }}">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s1.image }}')"></div>
         <div class="grid-body">
-          <p class="grid-cat">AI &amp; Technology</p>
+          <p class="grid-cat">{{ s1.categories | first | capitalize | default: "AI" }}</p>
           <p class="grid-title">{{ s1.title }}</p>
           <p class="grid-excerpt">{{ s1.excerpt | truncate: 90 }}</p>
           <p class="grid-meta">{{ s1.date | date: "%B %d, %Y" }}</p>
@@ -142,7 +142,7 @@ title: AI Pulse - Daily AI news that makes sense
       <a class="grid-card grid-card-auto post-item" href="{{ s2.url | relative_url }}" data-cat="{{ s2.categories | first | default: 'all' }}">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s2.image }}')"></div>
         <div class="grid-body">
-          <p class="grid-cat">AI &amp; Technology</p>
+          <p class="grid-cat">{{ s2.categories | first | capitalize | default: "AI" }}</p>
           <p class="grid-title">{{ s2.title }}</p>
           <p class="grid-excerpt">{{ s2.excerpt | truncate: 90 }}</p>
           <p class="grid-meta">{{ s2.date | date: "%B %d, %Y" }}</p>
@@ -153,7 +153,7 @@ title: AI Pulse - Daily AI news that makes sense
       <a class="grid-card grid-card-auto post-item" href="{{ s3.url | relative_url }}" data-cat="{{ s3.categories | first | default: 'all' }}">
         <div class="grid-img grid-img-tall" style="background-image:url('{{ s3.image }}')"></div>
         <div class="grid-body">
-          <p class="grid-cat">AI &amp; Technology</p>
+          <p class="grid-cat">{{ s3.categories | first | capitalize | default: "AI" }}</p>
           <p class="grid-title">{{ s3.title }}</p>
           <p class="grid-excerpt">{{ s3.excerpt | truncate: 90 }}</p>
           <p class="grid-meta">{{ s3.date | date: "%B %d, %Y" }}</p>
@@ -200,7 +200,7 @@ title: AI Pulse - Daily AI news that makes sense
         <a class="grid-card grid-card-auto post-item" href="{{ post.url | relative_url }}" data-cat="{{ post.categories | first | default: 'all' }}" data-title="{{ post.title | downcase }}">
           <div class="grid-img grid-img-short" style="background-image:url('{{ post.image }}')"></div>
           <div class="grid-body">
-            <p class="grid-cat">AI &amp; Technology</p>
+            <p class="grid-cat">{{ post.categories | first | capitalize | default: "AI" }}</p>
             <p class="grid-title">{{ post.title | truncate: 65 }}</p>
             <p class="grid-excerpt">{{ post.excerpt | truncate: 80 }}</p>
             <p class="grid-meta">{{ post.date | date: "%b %d, %Y" }}</p>
@@ -241,6 +241,37 @@ title: AI Pulse - Daily AI news that makes sense
 </div>
 
 <script>
+// ── Category tab filter ──
+window.setTab = function(cat) {
+  // Update active tab button
+  document.querySelectorAll('.cat-tab-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.cat === cat);
+  });
+  // Show/hide post cards
+  document.querySelectorAll('.post-item').forEach(function(card) {
+    if (cat === 'all') {
+      card.style.display = '';
+    } else {
+      card.style.display = (card.dataset.cat === cat) ? '' : 'none';
+    }
+  });
+  // Update active nav link
+  document.querySelectorAll('.nav-links a').forEach(function(a) {
+    a.classList.remove('nav-active');
+  });
+  // Store active tab
+  window._activeTab = cat;
+};
+
+// Check URL hash on load
+(function() {
+  var hash = window.location.hash.replace('#','');
+  var tabMap = {'tools':'tools','money':'money','business':'business','bigtech':'bigtech','startups':'startups','research':'research','policy':'policy'};
+  if (tabMap[hash]) {
+    setTimeout(function(){ window.setTab(tabMap[hash]); }, 100);
+  }
+})();
+
 // Scrolling ticker
 (function(){
   const inner=document.getElementById('ticker-inner');
@@ -264,75 +295,90 @@ const stocks = [
   {id:'amzn',  sym:'AMZN'}
 ];
 async function loadStocks(){
-  const CACHE_KEY='aipulse_stocks';
-  const CACHE_TTL=30*60*1000;
+  // Use stooq.com — free, no API key, no CORS issues, real-time data
+  const CACHE='aph_stocks_v2';
+  const TTL=20*60*1000;
   try{
-    const cached=sessionStorage.getItem(CACHE_KEY);
-    if(cached){
-      const obj=JSON.parse(cached);
-      if(Date.now()-obj.ts<CACHE_TTL){
-        renderStocks(obj.data);
-        return;
-      }
-    }
+    const c=sessionStorage.getItem(CACHE);
+    if(c){const o=JSON.parse(c);if(Date.now()-o.ts<TTL){renderStocks(o.d);return;}}
   }catch(e){}
 
   const stocks=[
-    {id:'nvda',sym:'NVDA'},{id:'msft',sym:'MSFT'},{id:'googl',sym:'GOOGL'},
-    {id:'meta',sym:'META'},{id:'amzn',sym:'AMZN'}
-  ];
-  const proxies=[
-    sym=>'https://api.allorigins.win/get?url='+encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=2d'),
-    sym=>'https://corsproxy.io/?'+encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=2d'),
-    sym=>'https://api.codetabs.com/v1/proxy?quest=https://query1.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=2d'
+    {id:'nvda',sym:'NVDA.US'},
+    {id:'msft',sym:'MSFT.US'},
+    {id:'googl',sym:'GOOGL.US'},
+    {id:'meta',sym:'META.US'},
+    {id:'amzn',sym:'AMZN.US'}
   ];
 
-  async function fetchStock(sym){
-    for(const proxy of proxies){
-      try{
-        const r=await fetch(proxy(sym),{signal:AbortSignal.timeout(6000)});
-        if(!r.ok) continue;
-        const raw=await r.json();
-        const contents=raw.contents||raw;
-        const parsed=typeof contents==='string'?JSON.parse(contents):contents;
-        const meta=parsed.chart.result[0].meta;
-        return {price:meta.regularMarketPrice, prev:meta.chartPreviousClose||meta.previousClose};
-      }catch(e){continue;}
-    }
-    return null;
+  async function getQuote(sym){
+    try{
+      // stooq CSV: date,open,high,low,close,volume
+      const url='https://stooq.com/q/d/l/?s='+sym+'&i=d';
+      const proxy='https://api.allorigins.win/raw?url='+encodeURIComponent(url);
+      const r=await fetch(proxy,{signal:AbortSignal.timeout(7000)});
+      const csv=await r.text();
+      const rows=csv.trim().split('\n');
+      if(rows.length<3) return null;
+      // Get last two rows for price + prev close
+      const last=rows[rows.length-1].split(',');
+      const prev=rows[rows.length-2].split(',');
+      const price=parseFloat(last[4]);
+      const prevClose=parseFloat(prev[4]);
+      if(isNaN(price)||isNaN(prevClose)) return null;
+      return {price,prev:prevClose};
+    }catch(e){return null;}
+  }
+
+  // Also try corsproxy.io as backup per stock
+  async function getQuoteFallback(sym){
+    try{
+      const url='https://stooq.com/q/d/l/?s='+sym+'&i=d';
+      const proxy='https://corsproxy.io/?'+encodeURIComponent(url);
+      const r=await fetch(proxy,{signal:AbortSignal.timeout(7000)});
+      const csv=await r.text();
+      const rows=csv.trim().split('\n');
+      if(rows.length<3) return null;
+      const last=rows[rows.length-1].split(',');
+      const prev=rows[rows.length-2].split(',');
+      const price=parseFloat(last[4]);
+      const prevClose=parseFloat(prev[4]);
+      if(isNaN(price)||isNaN(prevClose)) return null;
+      return {price,prev:prevClose};
+    }catch(e){return null;}
   }
 
   const results=[];
   for(const s of stocks){
-    const data=await fetchStock(s.sym);
+    let data=await getQuote(s.sym);
+    if(!data) data=await getQuoteFallback(s.sym);
     if(data){
       const chg=data.price-data.prev;
-      const pct=((chg/data.prev)*100).toFixed(2);
-      results.push({id:s.id,price:data.price,pct:parseFloat(pct),up:chg>=0});
+      const pct=((chg/data.prev)*100);
+      results.push({id:s.id,price:data.price,pct,up:chg>=0});
     } else {
       results.push({id:s.id,price:null,pct:0,up:true});
     }
-    await new Promise(r=>setTimeout(r,400));
+    await new Promise(r=>setTimeout(r,300));
   }
-
-  try{sessionStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),data:results}));}catch(e){}
+  try{sessionStorage.setItem(CACHE,JSON.stringify({ts:Date.now(),d:results}));}catch(e){}
   renderStocks(results);
 }
 
 function renderStocks(results){
-  const maxPct=Math.max(...results.map(p=>Math.abs(p.pct)),0.1);
+  const maxPct=Math.max(...results.filter(p=>p.price).map(p=>Math.abs(p.pct)),0.1);
   results.forEach(p=>{
     const pEl=document.getElementById('s-'+p.id);
     const cEl=document.getElementById('c-'+p.id);
     const bEl=document.getElementById('b-'+p.id);
-    if(pEl) pEl.textContent=p.price?'$'+p.price.toFixed(2):'N/A';
+    if(pEl) pEl.textContent=p.price?'$'+p.price.toFixed(2):'—';
     if(cEl&&p.price){
       cEl.textContent=(p.up?'+':'')+p.pct.toFixed(2)+'%';
       cEl.className='ai-stock-change '+(p.up?'up':'down');
     }
     if(bEl&&p.price){
       bEl.className='ai-stock-bar-fill '+(p.up?'up':'down');
-      setTimeout(()=>{bEl.style.width=Math.max(8,Math.round((Math.abs(p.pct)/maxPct)*100))+'%';},100);
+      setTimeout(()=>{bEl.style.width=Math.max(6,Math.round((Math.abs(p.pct)/maxPct)*100))+'%';},150);
     }
   });
 }
