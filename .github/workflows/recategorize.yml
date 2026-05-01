@@ -1,0 +1,29 @@
+name: Re-categorize all posts
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  recat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run re-categorizer
+        run: python scripts/recategorize_posts.py
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add _posts/
+          if git diff --cached --quiet; then
+            echo "Nothing changed"
+          else
+            git commit -m "chore: re-categorize all posts with improved keyword detection"
+            git push
+          fi
