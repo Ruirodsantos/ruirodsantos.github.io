@@ -1,0 +1,54 @@
+---
+layout: default
+---
+{% assign cat_slug = page.cat_slug %}
+{% assign cat_label = page.cat_label %}
+{% assign cat_posts = site.posts | where_exp: "post", "post.categories contains cat_slug" %}
+
+<div class="page-wrap">
+  <div class="section-header" style="margin-top:20px">
+    <div class="section-header-accent"></div>
+    <span class="section-header-title">{{ cat_label }}</span>
+    <div class="section-header-line"></div>
+  </div>
+
+  {% if cat_posts.size > 0 %}
+  {% assign hero = cat_posts[0] %}
+
+  <!-- Hero post for this category -->
+  <div class="hero-row" style="margin-bottom:24px">
+    <a class="hero-card" href="{{ hero.url | relative_url }}">
+      <div class="hero-img" style="background-image:url('{{ hero.image }}')">
+        <div class="hero-overlay"></div>
+        <div class="hero-body">
+          <span class="hero-tag">Top Story</span>
+          <h1 class="hero-title">{{ hero.title }}</h1>
+          <p class="hero-excerpt">{{ hero.excerpt | truncate: 120 }}</p>
+          <p class="hero-date">{{ hero.date | date: "%B %d, %Y" }}</p>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Rest of posts in this category -->
+  {% assign rest_posts = cat_posts | slice: 1, 100 %}
+  {% if rest_posts.size > 0 %}
+  <div class="grid-3 grid-auto" style="margin-bottom:28px">
+    {% for post in rest_posts limit:24 %}
+    <a class="grid-card grid-card-auto" href="{{ post.url | relative_url }}">
+      <div class="grid-img grid-img-short" style="background-image:url('{{ post.image }}')"></div>
+      <div class="grid-body">
+        <p class="grid-cat">{{ cat_label }}</p>
+        <p class="grid-title">{{ post.title | truncate: 65 }}</p>
+        <p class="grid-excerpt">{{ post.excerpt | truncate: 80 }}</p>
+        <p class="grid-meta">{{ post.date | date: "%b %d, %Y" }}</p>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <p style="text-align:center;padding:40px;color:#888">No articles in this category yet. Check back soon!</p>
+  {% endif %}
+</div>
