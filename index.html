@@ -36,7 +36,7 @@ title: AI Pulse - Daily AI news that makes sense
     <div class="hero-row">
 
       <!-- LEFT: Big hero card -->
-      <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="{{ post.categories | first | default: 'all' }}">
+      <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="{{ hero.categories | first | default: 'all' }}">
         <div class="hero-img" style="background-image:url('{{ hero.image }}')">
           <div class="hero-overlay"></div>
           <div class="hero-content">
@@ -241,7 +241,7 @@ title: AI Pulse - Daily AI news that makes sense
 </div>
 
 <script>
-// ── Category tab filter ──
+// ââ Category tab filter ââ
 window.setTab = function(cat) {
   // Update active tab button
   document.querySelectorAll('.cat-tab-btn').forEach(function(btn) {
@@ -295,7 +295,7 @@ const stocks = [
   {id:'amzn',  sym:'AMZN'}
 ];
 async function loadStocks(){
-  // Use stooq.com — free, no API key, no CORS issues, real-time data
+  // Use stooq.com â free, no API key, no CORS issues, real-time data
   const CACHE='aph_stocks_v2';
   const TTL=20*60*1000;
   try{
@@ -371,7 +371,7 @@ function renderStocks(results){
     const pEl=document.getElementById('s-'+p.id);
     const cEl=document.getElementById('c-'+p.id);
     const bEl=document.getElementById('b-'+p.id);
-    if(pEl) pEl.textContent=p.price?'$'+p.price.toFixed(2):'—';
+    if(pEl) pEl.textContent=p.price?'$'+p.price.toFixed(2):'â';
     if(cEl&&p.price){
       cEl.textContent=(p.up?'+':'')+p.pct.toFixed(2)+'%';
       cEl.className='ai-stock-change '+(p.up?'up':'down');
