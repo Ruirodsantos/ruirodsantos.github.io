@@ -344,10 +344,10 @@
       </a>
       <div class="nav-right">
         <div class="nav-links">
-          <a href="/">Latest</a>
-          <a href="/">AI Tools</a>
-          <a href="/">Make Money</a>
-          <a href="/">Business</a>
+          <a href="/" onclick="if(window.setTab){event.preventDefault();setTab('all')}">Latest</a>
+          <a href="/#tools" onclick="if(window.setTab){event.preventDefault();setTab('tools')}">AI Tools</a>
+          <a href="/#money" onclick="if(window.setTab){event.preventDefault();setTab('money')}">Make Money</a>
+          <a href="/#business" onclick="if(window.setTab){event.preventDefault();setTab('business')}">Business</a>
         </div>
         <button class="nav-search-btn" id="srch-btn" onclick="toggleSearch()" aria-label="Search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><a href="#newsletter-section" class="nav-subscribe">Subscribe free</a>
       </div>
@@ -377,14 +377,14 @@
 
   <div class="cats-bar">
     <div class="cats-inner">
-      <a class="cat-link active" data-cat="all">All Stories</a>
-      <a class="cat-link" data-cat="tools">AI Tools</a>
-      <a class="cat-link" data-cat="business">Business</a>
-      <a class="cat-link" data-cat="money">Make Money</a>
-      <a class="cat-link" data-cat="bigtech">Big Tech</a>
-      <a class="cat-link" data-cat="startups">Startups</a>
-      <a class="cat-link" data-cat="research">Research</a>
-      <a class="cat-link" data-cat="policy">Policy</a>
+      <a class="cat-link cat-tab-btn active" data-cat="all" onclick="setTab('all')">All Stories</a>
+      <a class="cat-link cat-tab-btn" data-cat="tools" onclick="setTab('tools')">AI Tools</a>
+      <a class="cat-link cat-tab-btn" data-cat="business" onclick="setTab('business')">Business</a>
+      <a class="cat-link cat-tab-btn" data-cat="money" onclick="setTab('money')">Make Money</a>
+      <a class="cat-link cat-tab-btn" data-cat="bigtech" onclick="setTab('bigtech')">Big Tech</a>
+      <a class="cat-link cat-tab-btn" data-cat="startups" onclick="setTab('startups')">Startups</a>
+      <a class="cat-link cat-tab-btn" data-cat="research" onclick="setTab('research')">Research</a>
+      <a class="cat-link cat-tab-btn" data-cat="policy" onclick="setTab('policy')">Policy</a>
     </div>
   </div>
 
@@ -485,7 +485,21 @@ document.addEventListener("keydown",function(e){
   if(e.key==="Escape")document.getElementById("srch-overlay").classList.remove("open");
 });
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-function mrk(t,q){var re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\</body>")+")","gi");return t.replace(re,"<mark>$1</mark>");}
+function mrk(t,q){var re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\
+  <script>
+  window.setTab=function(cat){
+    document.querySelectorAll(".cat-tab-btn").forEach(function(b){b.classList.toggle("active",b.dataset.cat===cat);});
+    document.querySelectorAll(".post-item").forEach(function(c){c.style.display=cat==="all"||(c.dataset.cat===cat)?"":"none";});
+    window._activeTab=cat;
+  };
+  // Handle hash on load
+  (function(){
+    var h=window.location.hash.replace("#","");
+    var m={"tools":1,"money":1,"business":1,"bigtech":1,"startups":1,"research":1,"policy":1};
+    if(m[h]) setTimeout(function(){window.setTab(h);},200);
+  })();
+  </script>
+</body>")+")","gi");return t.replace(re,"<mark>$1</mark>");}
 var _srchCache=null;
 function doSearch(q){
   var res=document.getElementById("srch-res");
