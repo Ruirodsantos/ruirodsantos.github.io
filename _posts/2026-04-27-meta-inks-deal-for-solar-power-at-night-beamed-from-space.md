@@ -3,7 +3,7 @@ layout: post
 title: "Meta inks deal for solar power at night, beamed from space"
 date: 2026-04-27
 excerpt: "Overview Energy's first contract with Meta is a small step toward a future of space-based solar power."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/17614479/pexels-photo-17614479.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/27/meta-inks-deal-for-solar-power-at-night-beamed-from-space/"
 ---

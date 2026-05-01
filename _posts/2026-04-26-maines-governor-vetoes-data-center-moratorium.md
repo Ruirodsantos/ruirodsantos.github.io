@@ -3,7 +3,7 @@ layout: post
 title: "Maine’s governor vetoes data center moratorium"
 date: 2026-04-26
 excerpt: "L.D. 307 would have imposed the country’s first statewide moratorium on new data centers — lasting, in this case, until November 1, 2027."
-categories: [ai, practical]
+categories: [ai]
 image: "https://images.pexels.com/photos/7947703/pexels-photo-7947703.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/25/maines-governor-vetoes-data-center-moratorium/"
 ---

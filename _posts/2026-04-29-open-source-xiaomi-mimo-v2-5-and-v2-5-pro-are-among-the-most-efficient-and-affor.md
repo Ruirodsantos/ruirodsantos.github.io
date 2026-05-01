@@ -3,7 +3,7 @@ layout: post
 title: "Open source Xiaomi MiMo-V2.5 and V2.5-Pro are among the most efficient (and affordable) at agentic 'claw' tasks"
 date: 2026-04-29
 excerpt: "Xiaomi, the Chinese firm best known for its smartphones and electric vehicles, has lately been shipping some incredibly affordable and high-powered open source..."
-categories: [ai, practical]
+categories: [policy]
 image: "https://images.pexels.com/photos/27598326/pexels-photo-27598326.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/technology/open-source-xiaomi-mimo-v2-5-and-v2-5-pro-are-among-the-most-efficient-and-affordable-at-agentic-claw-tasks"
 ---

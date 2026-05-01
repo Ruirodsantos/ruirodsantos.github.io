@@ -3,7 +3,7 @@ layout: post
 title: "Why Cohere is merging with Aleph Alpha"
 date: 2026-04-26
 excerpt: "Canadian AI startup Cohere is taking over Germany-based Aleph Alpha with support from Lidl’s owner, Schwarz Group. With the blessing of their governments, the..."
-categories: [ai, practical]
+categories: [policy]
 image: "https://images.pexels.com/photos/21939167/pexels-photo-21939167.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/25/why-cohere-is-merging-with-aleph-alpha/"
 ---

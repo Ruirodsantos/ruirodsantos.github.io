@@ -3,7 +3,7 @@ layout: post
 title: "To buy this Bay Area home, you’ll need Anthropic equity"
 date: 2026-04-28
 excerpt: "Someone’s offering an unusual deal for a 13-acre property in Mill Valley, just north of San Francisco."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/12505713/pexels-photo-12505713.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/26/to-buy-this-bay-area-home-youll-need-anthropic-equity/"
 ---

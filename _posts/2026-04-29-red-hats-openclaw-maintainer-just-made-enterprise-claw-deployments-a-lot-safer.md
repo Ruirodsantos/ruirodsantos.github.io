@@ -3,7 +3,7 @@ layout: post
 title: "Red Hat’s OpenClaw maintainer just made enterprise Claw deployments a lot safer"
 date: 2026-04-29
 excerpt: "Tank OS puts OpenClaw AI agents into a container that lets it run reliably and more safely, especially for those running fleets of them."
-categories: [ai, practical]
+categories: [policy]
 image: "https://images.pexels.com/photos/3825581/pexels-photo-3825581.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/28/red-hats-openclaw-maintainer-just-made-enterprise-claw-deployments-a-lot-safer/"
 ---

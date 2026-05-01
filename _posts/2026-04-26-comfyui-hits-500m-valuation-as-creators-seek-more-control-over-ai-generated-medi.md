@@ -3,7 +3,7 @@ layout: post
 title: "ComfyUI hits $500M valuation as creators seek more control over AI-generated media"
 date: 2026-04-26
 excerpt: "ComfyUI, whose tools give creators more control over AI image, video, and audio generation, just raised $30 million."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/5942520/pexels-photo-5942520.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/24/comfyui-hits-500m-valuation-as-creators-seek-more-control-over-ai-generated-media/"
 ---

@@ -3,7 +3,7 @@ layout: post
 title: "Why supply chains are the proving ground for automation‑led iPaaS"
 date: 2026-04-29
 excerpt: "Presented by EdgeverveSupply chains are where legacy integration models reach their limits. As partner networks expand and operational volatility increases, tr..."
-categories: [ai, practical]
+categories: [ai]
 image: "https://images.pexels.com/photos/33537946/pexels-photo-33537946.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/orchestration/why-supply-chains-are-the-proving-ground-for-automation-led-ipaas"
 ---

@@ -3,7 +3,7 @@ layout: post
 title: "How to build custom reasoning agents with a fraction of the compute"
 date: 2026-04-29
 excerpt: "Training AI reasoning models demands resources that most enterprise teams do not have. Engineering teams are often forced to choose between distilling knowledg..."
-categories: [ai, practical]
+categories: [research]
 image: "https://images.pexels.com/photos/4888922/pexels-photo-4888922.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/orchestration/how-to-build-custom-reasoning-agents-with-a-fraction-of-the-compute"
 ---

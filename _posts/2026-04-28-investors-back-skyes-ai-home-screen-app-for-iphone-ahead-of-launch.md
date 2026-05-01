@@ -3,7 +3,7 @@ layout: post
 title: "Investors back Skye’s AI home screen app for iPhone ahead of launch"
 date: 2026-04-28
 excerpt: "Skye's new AI app attracted investors before it even launched — a sign of interest in a more AI-aware iPhone."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/30869149/pexels-photo-30869149.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/27/investors-back-skye-signull-labs-ai-home-screen-app-for-iphone-ahead-of-launch/"
 ---

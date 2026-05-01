@@ -3,7 +3,7 @@ layout: post
 title: "Google expands Pentagon’s access to its AI after Anthropic’s refusal"
 date: 2026-04-29
 excerpt: "After Anthropic refused to allow the DoD to use its AI for domestic mass surveillance and autonomous weapons, Google has signed a new contract with the departm..."
-categories: [ai, practical]
+categories: [bigtech]
 image: "https://images.pexels.com/photos/10774603/pexels-photo-10774603.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/28/google-expands-pentagons-access-to-its-ai-after-anthropics-refusal/"
 ---

@@ -3,7 +3,7 @@ layout: post
 title: "Firestorm Labs raises $82M to take drone factories into the field"
 date: 2026-04-30
 excerpt: "A defense startup just raised $82 million to put drone factories inside shipping containers and bring manufacturing to the front lines."
-categories: [startups]
+categories: [business]
 image: "https://images.pexels.com/photos/9945316/pexels-photo-9945316.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/29/firestorm-labs-raises-82m-to-take-drone-factories-into-the-field/"
 ---

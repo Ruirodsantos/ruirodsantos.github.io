@@ -3,7 +3,7 @@ layout: post
 title: "American AI startup Poolside launches free, high-performing open model Laguna XS.2 for local agentic coding"
 date: 2026-04-29
 excerpt: "The AI race lately has felt a bit like a game of tennis: first, Anthropic releases a new, pricey state-of-the-art proprietary model for general users (Claude O..."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/7294523/pexels-photo-7294523.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/technology/american-ai-startup-poolside-launches-free-high-performing-open-model-laguna-xs-2-for-local-agentic-coding"
 ---

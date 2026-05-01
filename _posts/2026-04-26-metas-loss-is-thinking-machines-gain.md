@@ -3,7 +3,7 @@ layout: post
 title: "Meta’s loss is Thinking Machines’ gain"
 date: 2026-04-26
 excerpt: "Meta has been poaching talent from Thinking Machines Lab. But it's a two-way street."
-categories: [ai, practical]
+categories: [research]
 image: "https://images.pexels.com/photos/17614479/pexels-photo-17614479.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/24/metas-loss-is-thinking-machines-gain/"
 ---

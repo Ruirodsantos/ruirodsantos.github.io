@@ -3,7 +3,7 @@ layout: post
 title: "China blocks Meta’s $2B Manus deal after months-long probe"
 date: 2026-04-28
 excerpt: "China has ordered Meta to unwind its multibillion-dollar Manus acquisition, dealing a potential setback to Zuckerberg’s push into AI agents."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/15406293/pexels-photo-15406293.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/27/china-vetoes-metas-2b-manus-deal-after-months-long-probe/"
 ---

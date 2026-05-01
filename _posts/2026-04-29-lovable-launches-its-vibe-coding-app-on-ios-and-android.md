@@ -3,7 +3,7 @@ layout: post
 title: "Lovable launches its vibe-coding app on iOS and Android"
 date: 2026-04-29
 excerpt: "The app allows developers to vibe code web apps and websites on the go."
-categories: [ai, practical]
+categories: [tools]
 image: "https://images.pexels.com/photos/18279205/pexels-photo-18279205.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/28/lovable-launches-its-vibe-coding-app-on-ios-and-android/"
 ---

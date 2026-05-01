@@ -3,7 +3,7 @@ layout: post
 title: "On the stand, Elon Musk can’t escape his own tweets"
 date: 2026-04-30
 excerpt: "Elon Musk took the stand for the second day for his attempt to legally dismantle OpenAI."
-categories: [ai]
+categories: [policy]
 image: "https://images.pexels.com/photos/30918009/pexels-photo-30918009.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/29/on-the-stand-elon-musk-cant-escape-his-own-tweets/"
 ---

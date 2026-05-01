@@ -3,7 +3,7 @@ layout: post
 title: "Amazon launches an AI-powered audio Q&A experience on product pages"
 date: 2026-04-29
 excerpt: "Amazon's new 'Join the chat' feature lets you ask questions about products and receive AI-powered audio responses."
-categories: [ai, practical]
+categories: [tools]
 image: "https://images.pexels.com/photos/1666315/pexels-photo-1666315.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/28/amazon-launches-an-ai-powered-audio-qa-experience-on-product-pages/"
 ---

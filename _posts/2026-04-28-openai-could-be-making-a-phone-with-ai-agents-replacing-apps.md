@@ -3,7 +3,7 @@ layout: post
 title: "OpenAI could be making a phone with AI agents replacing apps"
 date: 2026-04-28
 excerpt: "There have been plenty of rumors about OpenAI's hardware plans, which involve launching a pair of earbuds. A new note from industry analyst Ming-Chi Kuo sugges..."
-categories: [ai, practical]
+categories: [bigtech]
 image: "https://images.pexels.com/photos/15863044/pexels-photo-15863044.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/27/openai-could-be-making-a-phone-with-ai-agents-replacing-apps/"
 ---

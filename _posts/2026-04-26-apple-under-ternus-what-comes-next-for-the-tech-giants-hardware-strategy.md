@@ -3,7 +3,7 @@ layout: post
 title: "Apple under Ternus: what comes next for the tech giant’s hardware strategy"
 date: 2026-04-26
 excerpt: "John Ternus, Apple's incoming CEO, is a hardware guy, signaling Apple may be putting devices back at the center of its strategy."
-categories: [ai, practical]
+categories: [bigtech]
 image: "https://images.pexels.com/photos/28387802/pexels-photo-28387802.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/25/apple-under-ternus-what-comes-next-for-the-tech-giants-hardware-strategy/"
 ---

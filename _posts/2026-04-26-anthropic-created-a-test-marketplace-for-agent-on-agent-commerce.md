@@ -3,7 +3,7 @@ layout: post
 title: "Anthropic created a test marketplace for agent-on-agent commerce"
 date: 2026-04-26
 excerpt: "In a recent experiment, Anthropic created a classified marketplace where AI agents represented both buyers and sellers, striking real deals for real goods and..."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/10878607/pexels-photo-10878607.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/25/anthropic-created-a-test-marketplace-for-agent-on-agent-commerce/"
 ---

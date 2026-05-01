@@ -3,7 +3,7 @@ layout: post
 title: "Why OpenAI's 'goblin' problem matters — and how you can release the goblins on your own"
 date: 2026-05-01
 excerpt: "AI is more than a technology — it&#x27;s magic.Don&#x27;t believe me? Why, then, is one of the leading companies in the space, OpenAI, publishing entire offici..."
-categories: [business]
+categories: [tools]
 image: "https://images.pexels.com/photos/11393307/pexels-photo-11393307.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/technology/why-openais-goblin-problem-matters-and-how-you-can-release-the-goblins-on-your-own"
 ---

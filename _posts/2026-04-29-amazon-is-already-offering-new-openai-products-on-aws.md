@@ -3,7 +3,7 @@ layout: post
 title: "Amazon is already offering new OpenAI products on AWS"
 date: 2026-04-29
 excerpt: "A day after OpenAI got Microsoft to agree to end exclusive rights, AWS announced a slate of OpenAI model offerings, including a new agent service."
-categories: [ai, practical]
+categories: [tools]
 image: "https://images.pexels.com/photos/4560039/pexels-photo-4560039.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/28/amazon-is-already-offering-new-openai-products-on-aws/"
 ---

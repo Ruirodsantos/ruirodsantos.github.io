@@ -3,7 +3,7 @@ layout: post
 title: "Alibaba's Metis agent cuts redundant AI tool calls from 98% to 2% — and gets more accurate doing it"
 date: 2026-05-01
 excerpt: "One of the key challenges of building effective AI agents is teaching them to choose between using external tools or relying on their internal knowledge. But l..."
-categories: [business]
+categories: [tools]
 image: "https://images.pexels.com/photos/21614838/pexels-photo-21614838.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/orchestration/alibabas-metis-agent-cuts-redundant-ai-tool-calls-from-98-to-2-and-gets-more-accurate-doing-it"
 ---

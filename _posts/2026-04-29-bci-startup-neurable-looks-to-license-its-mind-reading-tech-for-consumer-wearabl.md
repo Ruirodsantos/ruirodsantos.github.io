@@ -3,7 +3,7 @@ layout: post
 title: "BCI startup Neurable looks to license its ‘mind-reading’ tech for consumer wearables"
 date: 2026-04-29
 excerpt: "The startup specializes in 'non-invasive' 'mind-reading' tech — a kind of neural data collection that, its CEO hopes, will have all sorts of consumer applicati..."
-categories: [ai, practical]
+categories: [startups]
 image: "https://images.pexels.com/photos/7413919/pexels-photo-7413919.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/28/bci-startup-neurable-looks-to-license-its-mind-reading-tech-for-consumer-wearables/"
 ---

@@ -3,7 +3,7 @@ layout: post
 title: "New AI framework autonomously optimizes training data, architectures and algorithms — outperforming human baselines"
 date: 2026-04-29
 excerpt: "AI R&amp;D runs on a cycle of hypothesis, experiment, and analysis — each step demanding substantial manual engineering effort. A new framework from researcher..."
-categories: [ai, practical]
+categories: [research]
 image: "https://images.pexels.com/photos/18510427/pexels-photo-18510427.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/orchestration/new-ai-framework-autonomously-optimizes-training-data-architectures-and-algorithms-outperforming-human-baselines"
 ---

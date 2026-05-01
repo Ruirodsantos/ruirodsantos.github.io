@@ -3,7 +3,7 @@ layout: post
 title: "DeepMind’s David Silver just raised $1.1B to build an AI that learns without human data"
 date: 2026-04-28
 excerpt: "Ineffable Intelligence, a British AI lab founded a mere few months ago by former DeepMind researcher David Silver, has raised $1.1 billion in funding at a valu..."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/18069814/pexels-photo-18069814.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/27/deepminds-david-silver-just-raised-1-1b-to-build-an-ai-that-learns-without-human-data/"
 ---

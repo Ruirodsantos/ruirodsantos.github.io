@@ -3,7 +3,7 @@ layout: post
 title: "Microsoft and OpenAI gut their exclusive deal, freeing OpenAI to sell on AWS and Google Cloud"
 date: 2026-04-29
 excerpt: "Microsoft and OpenAI on Monday announced a sweeping overhaul of the partnership that has defined the commercial AI era, dismantling key pillars of exclusivity..."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/10142683/pexels-photo-10142683.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/technology/microsoft-and-openai-gut-their-exclusive-deal-freeing-openai-to-sell-on-aws-and-google-cloud"
 ---

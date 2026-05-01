@@ -3,7 +3,7 @@ layout: post
 title: "Amazon’s cloud business is surging — and so is its capital spending"
 date: 2026-04-30
 excerpt: "The e-commerce giant is making more money than expected from AWS but it's also spending a lot, and will continue to do so in the near term, its chief executive..."
-categories: [tools]
+categories: [money]
 image: "https://images.pexels.com/photos/36252725/pexels-photo-36252725.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/29/amazons-cloud-business-is-surging-and-so-is-its-capital-spending/"
 ---

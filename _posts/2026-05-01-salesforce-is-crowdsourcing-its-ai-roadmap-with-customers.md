@@ -3,7 +3,7 @@ layout: post
 title: "Salesforce is crowdsourcing its AI roadmap — with customers"
 date: 2026-05-01
 excerpt: "Salesforce lets its customers lead its product roadmap with the thinking that if one enterprise customer has a problem, the others likely do too."
-categories: [ai]
+categories: [tools]
 image: "https://images.pexels.com/photos/6990339/pexels-photo-6990339.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/30/salesforce-is-crowdsourcing-its-ai-roadmap-with-customers/"
 ---

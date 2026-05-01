@@ -3,7 +3,7 @@ layout: post
 title: "At his OpenAI trial, Musk relitigates an old friendship"
 date: 2026-04-29
 excerpt: "It's a story Musk has told before -- in interviews and to author Walter Isaacson for his bestselling biography of Musk -- but Tuesday was the first time he sai..."
-categories: [ai, practical]
+categories: [ai]
 image: "https://images.pexels.com/photos/16587315/pexels-photo-16587315.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/28/at-his-openai-trial-musk-relitigates-an-old-friendship/"
 ---

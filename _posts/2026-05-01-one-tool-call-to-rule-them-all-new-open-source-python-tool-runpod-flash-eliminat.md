@@ -3,7 +3,7 @@ layout: post
 title: "One tool call to rule them all? New open source Python tool Runpod Flash eliminates containers for faster AI dev"
 date: 2026-05-01
 excerpt: "Runpod, the high-performance cloud computing and GPU platform designed specifically for AI development, today launched a new open source, MIT licensed, enterpr..."
-categories: [business]
+categories: [policy]
 image: "https://images.pexels.com/photos/7689876/pexels-photo-7689876.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/infrastructure/one-tool-call-to-rule-them-all-new-open-source-python-tool-runpod-flash-eliminates-containers-for-faster-ai-dev"
 ---

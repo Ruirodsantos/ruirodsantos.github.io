@@ -3,7 +3,7 @@ layout: post
 title: "YouTube is testing an AI-powered search feature that shows guided answers"
 date: 2026-04-29
 excerpt: "YouTube is rolling out the new AI search feature to Premium subscribers in the U.S. on an opt-in basis."
-categories: [ai, practical]
+categories: [tools]
 image: "https://images.pexels.com/photos/33440278/pexels-photo-33440278.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/28/youtube-is-testing-an-ai-powered-search-feature-that-shows-guided-answers/"
 ---

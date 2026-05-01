@@ -3,7 +3,7 @@ layout: post
 title: "Why Tokyo is the most important tech destination of 2026"
 date: 2026-04-26
 excerpt: "SusHi Tech Tokyo 2026 has four tightly defined technology domains, each backed by live demonstrations, dedicated exhibit floors, and sessions featuring the peo..."
-categories: [ai, practical]
+categories: [ai]
 image: "https://images.pexels.com/photos/22129858/pexels-photo-22129858.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/25/why-tokyo-is-the-most-important-tech-destination-of-2026/"
 ---

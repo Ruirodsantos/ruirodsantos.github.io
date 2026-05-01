@@ -3,7 +3,7 @@ layout: post
 title: "OpenAI ends Microsoft legal peril over its $50B Amazon deal"
 date: 2026-04-28
 excerpt: "OpenAI has won major concessions from its largest shareholder, Microsoft, that will allow it to sell products on AWS, while Microsoft gets more cash in a reven..."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/10142683/pexels-photo-10142683.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/27/openai-ends-microsoft-legal-peril-over-its-50b-amazon-deal/"
 ---

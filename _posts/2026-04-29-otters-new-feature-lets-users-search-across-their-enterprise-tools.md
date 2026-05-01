@@ -3,7 +3,7 @@ layout: post
 title: "Otter’s new feature lets users search across their enterprise tools"
 date: 2026-04-29
 excerpt: "With this launch, users can connect their Gmail, Google Drive, Notion, Jira, and Salesforce accounts and query that data along with existing meeting data. The..."
-categories: [ai, practical]
+categories: [tools]
 image: "https://images.pexels.com/photos/31414206/pexels-photo-31414206.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/2026/04/28/otters-new-feature-lets-users-search-across-their-enterprise-tools/"
 ---

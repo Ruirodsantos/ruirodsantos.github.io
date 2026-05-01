@@ -3,7 +3,7 @@ layout: post
 title: "Mistral AI launches Workflows, a Temporal-powered orchestration engine already running millions of daily executions"
 date: 2026-04-29
 excerpt: "Mistral AI, the Paris-based artificial intelligence company valued at €11.7 billion ($13.8 billion), today released Workflows in public preview — a production-..."
-categories: [ai, practical]
+categories: [business]
 image: "https://images.pexels.com/photos/19867470/pexels-photo-19867470.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/technology/mistral-ai-launches-workflows-a-temporal-powered-orchestration-engine-already-running-millions-of-daily-executions"
 ---
