@@ -264,41 +264,76 @@ const stocks = [
   {id:'amzn',  sym:'AMZN'}
 ];
 async function loadStocks(){
+  const CACHE_KEY='aipulse_stocks';
+  const CACHE_TTL=30*60*1000;
+  try{
+    const cached=sessionStorage.getItem(CACHE_KEY);
+    if(cached){
+      const obj=JSON.parse(cached);
+      if(Date.now()-obj.ts<CACHE_TTL){
+        renderStocks(obj.data);
+        return;
+      }
+    }
+  }catch(e){}
+
   const stocks=[
     {id:'nvda',sym:'NVDA'},{id:'msft',sym:'MSFT'},{id:'googl',sym:'GOOGL'},
     {id:'meta',sym:'META'},{id:'amzn',sym:'AMZN'}
   ];
-  const prices=[];
-  for(const s of stocks){
-    try{
-      const url='https://query1.finance.yahoo.com/v8/finance/chart/'+s.sym+'?interval=1d&range=2d';
-      const proxy='https://api.allorigins.win/get?url='+encodeURIComponent(url);
-      const r=await fetch(proxy);
-      const raw=await r.json();
-      const d2=JSON.parse(raw.contents);
-      const meta=d2.chart.result[0].meta;
-      const price=meta.regularMarketPrice;
-      const prev=meta.chartPreviousClose||meta.previousClose||price;
-      const chg=price-prev;
-      const pct=((chg/prev)*100).toFixed(2);
-      const up=chg>=0;
-      prices.push({id:s.id,price,pct:Math.abs(parseFloat(pct)),up});
-      const pEl=document.getElementById('s-'+s.id);
-      const cEl=document.getElementById('c-'+s.id);
-      if(pEl) pEl.textContent='$'+price.toFixed(2);
-      if(cEl){cEl.textContent=(up?'+':'-')+Math.abs(pct)+'%';cEl.className='ai-stock-change '+(up?'up':'down');}
-    }catch(e){
-      const pEl=document.getElementById('s-'+s.id);
-      if(pEl) pEl.textContent='N/A';
+  const proxies=[
+    sym=>'https://api.allorigins.win/get?url='+encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=2d'),
+    sym=>'https://corsproxy.io/?'+encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=2d'),
+    sym=>'https://api.codetabs.com/v1/proxy?quest=https://query1.finance.yahoo.com/v8/finance/chart/'+sym+'?interval=1d&range=2d'
+  ];
+
+  async function fetchStock(sym){
+    for(const proxy of proxies){
+      try{
+        const r=await fetch(proxy(sym),{signal:AbortSignal.timeout(6000)});
+        if(!r.ok) continue;
+        const raw=await r.json();
+        const contents=raw.contents||raw;
+        const parsed=typeof contents==='string'?JSON.parse(contents):contents;
+        const meta=parsed.chart.result[0].meta;
+        return {price:meta.regularMarketPrice, prev:meta.chartPreviousClose||meta.previousClose};
+      }catch(e){continue;}
     }
+    return null;
   }
-  // Animate bars relative to max pct change
-  const maxPct=Math.max(...prices.map(p=>p.pct),1);
-  prices.forEach(p=>{
-    const bar=document.getElementById('b-'+p.id);
-    if(!bar) return;
-    bar.className='ai-stock-bar-fill '+(p.up?'up':'down');
-    setTimeout(()=>{bar.style.width=Math.max(8,Math.round((p.pct/maxPct)*100))+'%';},100);
+
+  const results=[];
+  for(const s of stocks){
+    const data=await fetchStock(s.sym);
+    if(data){
+      const chg=data.price-data.prev;
+      const pct=((chg/data.prev)*100).toFixed(2);
+      results.push({id:s.id,price:data.price,pct:parseFloat(pct),up:chg>=0});
+    } else {
+      results.push({id:s.id,price:null,pct:0,up:true});
+    }
+    await new Promise(r=>setTimeout(r,400));
+  }
+
+  try{sessionStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),data:results}));}catch(e){}
+  renderStocks(results);
+}
+
+function renderStocks(results){
+  const maxPct=Math.max(...results.map(p=>Math.abs(p.pct)),0.1);
+  results.forEach(p=>{
+    const pEl=document.getElementById('s-'+p.id);
+    const cEl=document.getElementById('c-'+p.id);
+    const bEl=document.getElementById('b-'+p.id);
+    if(pEl) pEl.textContent=p.price?'$'+p.price.toFixed(2):'N/A';
+    if(cEl&&p.price){
+      cEl.textContent=(p.up?'+':'')+p.pct.toFixed(2)+'%';
+      cEl.className='ai-stock-change '+(p.up?'up':'down');
+    }
+    if(bEl&&p.price){
+      bEl.className='ai-stock-bar-fill '+(p.up?'up':'down');
+      setTimeout(()=>{bEl.style.width=Math.max(8,Math.round((Math.abs(p.pct)/maxPct)*100))+'%';},100);
+    }
   });
 }
 loadStocks();
