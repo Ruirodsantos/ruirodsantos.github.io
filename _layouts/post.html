@@ -5,13 +5,40 @@ layout: default
 {
   "@context": "https://schema.org",
   "@type": "NewsArticle",
-  "headline": {{ page.title | jsonify }},
-  "description": {{ page.excerpt | strip_html | truncate: 160 | jsonify }},
-  "image": {{ page.image | jsonify }},
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "{{ page.url | absolute_url }}"
+  },
+  "headline": {{ page.title | truncate: 110 | jsonify }},
+  "description": {{ page.excerpt | strip_html | strip_newlines | truncate: 155 | jsonify }},
+  "image": {
+    "@type": "ImageObject",
+    "url": "{{ page.image }}",
+    "width": 940,
+    "height": 650
+  },
   "datePublished": "{{ page.date | date_to_xmlschema }}",
   "dateModified": "{{ page.date | date_to_xmlschema }}",
-  "author": {"@type": "Organization","name": "AI Pulse","url": "https://ruirodsantos.github.io"},
-  "publisher": {"@type": "Organization","name": "AI Pulse"}
+  "author": {
+    "@type": "Organization",
+    "name": "The AI Pulse Hub",
+    "url": "https://theaipulsehub.com"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "The AI Pulse Hub",
+    "url": "https://theaipulsehub.com",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://theaipulsehub.com/favicon.svg",
+      "width": 60,
+      "height": 60
+    }
+  },
+  "url": "{{ page.url | absolute_url }}",
+  "isAccessibleForFree": true,
+  "inLanguage": "en-US",
+  "keywords": "{{ page.categories | join: ", " }}, AI news, artificial intelligence"
 }
 </script>
 
