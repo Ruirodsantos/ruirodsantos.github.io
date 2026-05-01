@@ -499,26 +499,5 @@ function mrk(t,q){var re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\
     if(m[h]) setTimeout(function(){window.setTab(h);},200);
   })();
   </script>
-</body>")+")","gi");return t.replace(re,"<mark>$1</mark>");}
-var _srchCache=null;
-function doSearch(q){
-  var res=document.getElementById("srch-res");
-  q=q.trim().toLowerCase();
-  if(!q){res.innerHTML='<p class="srch-hint">Start typing to search&hellip;</p>';return;}
-  if(_srchCache){_runSearch(q,_srchCache);return;}
-  fetch("/search.json").then(function(r){return r.json();}).then(function(data){
-    _srchCache=data; _runSearch(q,data);
-  }).catch(function(){res.innerHTML='<p class="srch-hint">Search unavailable</p>';});
-}
-function _runSearch(q,data){
-  var res=document.getElementById("srch-res");
-  var hits=data.filter(function(p){return p.t.toLowerCase().indexOf(q)>-1;}).slice(0,8);
-  if(!hits.length){res.innerHTML='<p class="srch-hint">No results for &ldquo;'+esc(q)+'&rdquo;</p>';return;}
-  res.innerHTML=hits.map(function(p){
-    return '<a class="sr-item" href="'+p.u+'"><div class="sr-img" style="background-image:url(\''+p.i+'\')"></div>'
-      +'<div><p class="sr-cat">'+esc(p.c)+'</p><p class="sr-title">'+mrk(esc(p.t),q)+'</p><p class="sr-date">'+esc(p.d)+'</p></div></a>';
-  }).join("");
-}
-</script>
 </body>
 </html>
