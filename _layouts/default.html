@@ -287,6 +287,44 @@
     </style>
   <!-- Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7715134134171575" crossorigin="anonymous"></script>
+
+  <!-- ═══ SEO & Social Meta ═══ -->
+  <meta name="description" content="{{ page.excerpt | strip_html | strip_newlines | truncate: 155 | default: site.description }}"/>
+  <meta name="keywords" content="{{ page.tags | join: ", " | default: "AI news, artificial intelligence, daily AI, machine learning" }}"/>
+  <meta name="author" content="The AI Pulse Hub"/>
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"/>
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="{{ page.url | absolute_url }}"/>
+
+  <!-- Open Graph (Facebook, LinkedIn, WhatsApp previews) -->
+  <meta property="og:type" content="{{ if page.layout == "post" }}article{{ else }}website{{ endif }}"/>
+  <meta property="og:title" content="{{ page.title | default: site.title }}"/>
+  <meta property="og:description" content="{{ page.excerpt | strip_html | strip_newlines | truncate: 155 | default: site.description }}"/>
+  <meta property="og:url" content="{{ page.url | absolute_url }}"/>
+  <meta property="og:site_name" content="The AI Pulse Hub"/>
+  <meta property="og:image" content="{{ page.image | default: site.url | append: "/assets/og-default.jpg" }}"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+  <meta property="og:locale" content="en_US"/>
+  {% if page.layout == "post" %}
+  <meta property="article:published_time" content="{{ page.date | date_to_xmlschema }}"/>
+  <meta property="article:modified_time" content="{{ page.date | date_to_xmlschema }}"/>
+  <meta property="article:section" content="{{ page.categories | first | capitalize | default: "AI" }}"/>
+  <meta property="article:author" content="The AI Pulse Hub"/>
+  {% endif %}
+
+  <!-- Twitter/X Card -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="{{ page.title | default: site.title }}"/>
+  <meta name="twitter:description" content="{{ page.excerpt | strip_html | strip_newlines | truncate: 155 | default: site.description }}"/>
+  <meta name="twitter:image" content="{{ page.image | default: site.url | append: "/assets/og-default.jpg" }}"/>
+  <meta name="twitter:site" content="@theaipulsehub"/>
+
+  <!-- Google News & Publisher -->
+  <meta name="news_keywords" content="{{ page.tags | join: ", " | default: "AI, artificial intelligence, tech news" }}"/>
+  <meta name="publisher" content="The AI Pulse Hub"/>
+  <meta name="copyright" content="The AI Pulse Hub 2026"/>
 </head>
 <body>
   <div class="topbar">
