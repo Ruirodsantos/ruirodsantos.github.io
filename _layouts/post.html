@@ -82,8 +82,37 @@ layout: default
       {% if page.source_url %}<span>&middot;</span><a href="{{ page.source_url }}" target="_blank" rel="noopener" style="color:#28c45e;font-weight:600">Source &#8594;</a>{% endif %}
     </div>
     
+  <!-- Adventis Sponsored Banner -->
+  <a class="adventis-banner" href="https://adventishub.com/" target="_blank" rel="noopener sponsored">
+    <div class="adventis-banner-left">
+      <img src="https://adventishub.com/images/Website_Adventis_Logo.png" alt="Adventis" class="adventis-logo"/>
+    </div>
+    <div class="adventis-banner-middle">
+      <p class="adventis-tagline">Performance Marketing &bull; Analytics &bull; AI Solutions</p>
+      <p class="adventis-desc">Grow your business with data-driven marketing, analytics and creative built to move real business metrics.</p>
+    </div>
+    <div class="adventis-banner-right">
+      <span class="adventis-cta">Start a project &rarr;</span>
+    </div>
+  </a>
+
+
 <style>
-.share-bar{display:flex;align-items:center;gap:8px;margin:16px 0 20px;flex-wrap:wrap}
+
+    /* Adventis banner */
+    .adventis-banner{display:flex;align-items:center;gap:20px;background:#0a0a14;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:18px 22px;text-decoration:none;margin:28px 0;transition:border-color .2s,box-shadow .2s;overflow:hidden;position:relative}
+    .adventis-banner::before{content:"Sponsored";position:absolute;top:8px;right:10px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.3)}
+    .adventis-banner:hover{border-color:rgba(255,255,255,.2);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+    .adventis-banner-left{flex-shrink:0}
+    .adventis-logo{height:32px;width:auto;display:block;filter:brightness(1)}
+    .adventis-banner-middle{flex:1;min-width:0}
+    .adventis-tagline{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.5);margin:0 0 4px}
+    .adventis-desc{font-size:13px;color:rgba(255,255,255,.85);margin:0;line-height:1.4;font-weight:500}
+    .adventis-banner-right{flex-shrink:0}
+    .adventis-cta{display:inline-block;background:#fff;color:#0a0a14;font-size:12px;font-weight:800;padding:9px 16px;border-radius:7px;white-space:nowrap;letter-spacing:.02em;transition:background .15s}
+    .adventis-banner:hover .adventis-cta{background:#f0f0f0}
+    @media(max-width:600px){.adventis-banner{flex-wrap:wrap;gap:12px}.adventis-banner-right{width:100%}.adventis-cta{display:block;text-align:center;padding:10px}}
+    .share-bar{display:flex;align-items:center;gap:8px;margin:16px 0 20px;flex-wrap:wrap}
 .share-label{font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em}
 .share-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;text-decoration:none;border:none;cursor:pointer;transition:opacity .15s,transform .15s}
 .share-btn:hover{opacity:.85;transform:scale(1.1)}
