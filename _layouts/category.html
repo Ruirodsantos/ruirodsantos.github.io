@@ -4,32 +4,54 @@ layout: default
 {% assign cat_slug = page.cat_slug %}
 {% assign cat_label = page.cat_label %}
 {% assign cat_posts = site.categories[cat_slug] %}
+{% if cat_posts == nil or cat_posts.size == 0 %}
+  {% assign cat_posts = site.posts | where_exp: "item", "item.categories contains page.cat_slug" %}
+{% endif %}
 
 <div class="page-wrap">
-  <div class="section-header" style="margin-top:20px">
-    <div class="section-header-accent"></div>
-    <span class="section-header-title">{{ cat_label }}</span>
-    <div class="section-header-line"></div>
+
+  <div class="hero-row">
+    <!-- LEFT: Hero + grid -->
+    <div class="hero-main">
+      {% if cat_posts and cat_posts.size > 0 %}
+      {% assign hero = cat_posts[0] %}
+      <a class="hero-card" href="{{ hero.url | relative_url }}">
+        <div class="hero-img" style="background-image:url('{{ hero.image }}')">
+          <div class="hero-overlay"></div>
+          <div class="hero-body">
+            <span class="hero-tag">Top Story</span>
+            <h1 class="hero-title">{{ hero.title }}</h1>
+            <p class="hero-excerpt">{{ hero.excerpt | strip_html | truncate: 120 }}</p>
+            <p class="hero-date">{{ hero.date | date: "%B %d, %Y" }}</p>
+          </div>
+        </div>
+      </a>
+      {% else %}
+      <div style="padding:40px;text-align:center;background:#f8f9fa;border-radius:12px;margin-bottom:20px">
+        <p style="color:#888;font-size:16px;margin:0">No articles in <strong>{{ cat_label }}</strong> yet — check back tomorrow!</p>
+        <a href="/" style="color:var(--green);font-weight:700;display:inline-block;margin-top:12px">← All Stories</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT: Trending sidebar -->
+    <div class="sidebar">
+      <p class="sidebar-header">Trending Now</p>
+      {% for post in site.posts limit:5 %}
+      <a class="sidebar-item" href="{{ post.url | relative_url }}">
+        <span class="sid-num">{{ forloop.index | prepend: "0" | slice: -2, 2 }}</span>
+        <div class="sid-body">
+          <p class="sid-title">{{ post.title | truncate: 55 }}</p>
+          <p class="sid-date">{{ post.date | date: "%b %d" }}</p>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
   </div>
 
-  {% if cat_posts.size > 0 %}
-  {% assign hero = cat_posts[0] %}
-
-  <!-- Hero -->
-  <a class="hero-card" href="{{ hero.url | relative_url }}" style="display:block;margin-bottom:24px">
-    <div class="hero-img" style="background-image:url('{{ hero.image }}')">
-      <div class="hero-overlay"></div>
-      <div class="hero-body">
-        <span class="hero-tag">Top Story</span>
-        <h1 class="hero-title">{{ hero.title }}</h1>
-        <p class="hero-excerpt">{{ hero.excerpt | strip_html | truncate: 120 }}</p>
-        <p class="hero-date">{{ hero.date | date: "%B %d, %Y" }}</p>
-      </div>
-    </div>
-  </a>
-
+  {% if cat_posts and cat_posts.size > 1 %}
   {% assign rest_posts = cat_posts | slice: 1, 100 %}
-  {% if rest_posts.size > 0 %}
+  <div class="section-label-row"><div class="section-label-accent"></div><span class="section-label">More {{ cat_label }}</span></div>
   <div class="grid-3 grid-auto" style="margin-bottom:28px">
     {% for post in rest_posts limit:24 %}
     <a class="grid-card grid-card-auto" href="{{ post.url | relative_url }}">
@@ -37,7 +59,6 @@ layout: default
       <div class="grid-body">
         <p class="grid-cat">{{ cat_label }}</p>
         <p class="grid-title">{{ post.title | truncate: 65 }}</p>
-        <p class="grid-excerpt">{{ post.excerpt | strip_html | truncate: 80 }}</p>
         <p class="grid-meta">{{ post.date | date: "%b %d, %Y" }}</p>
       </div>
     </a>
@@ -45,10 +66,4 @@ layout: default
   </div>
   {% endif %}
 
-  {% else %}
-  <div style="text-align:center;padding:60px 20px">
-    <p style="color:#888;font-size:16px">No articles in this category yet. Check back tomorrow!</p>
-    <a href="/" style="color:var(--green);font-weight:700">← Back to all stories</a>
-  </div>
-  {% endif %}
 </div>
