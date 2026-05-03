@@ -351,10 +351,10 @@
       </a>
       <div class="nav-right">
         <div class="nav-links">
-          <a href="/">Latest</a>
-          <a href="/ai-tools/">AI Tools</a>
-          <a href="/make-money/">Make Money</a>
-          <a href="/business/">Business</a>
+          <a href="/#all">Latest</a>
+          <a href="/#tools">AI Tools</a>
+          <a href="/#money">Make Money</a>
+          <a href="/#business">Business</a>
         </div>
         <button class="nav-search-btn" id="srch-btn" onclick="toggleSearch()" aria-label="Search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button><a href="#newsletter-section" class="nav-subscribe">Subscribe free</a>
       </div>
@@ -384,14 +384,14 @@
 
   <div class="cats-bar">
     <div class="cats-inner">
-      <a class="cat-link" href="/">All Stories</a>
-      <a class="cat-link" href="/ai-tools/">AI Tools</a>
-      <a class="cat-link" href="/business/">Business</a>
-      <a class="cat-link" href="/make-money/">Make Money</a>
-      <a class="cat-link" href="/big-tech/">Big Tech</a>
-      <a class="cat-link" href="/startups/">Startups</a>
-      <a class="cat-link" href="/research/">Research</a>
-      <a class="cat-link" href="/policy/">Policy</a>
+      <a class="cat-link active" data-cat="all" href="/#all">All Stories</a>
+      <a class="cat-link" data-cat="tools" href="/#tools">AI Tools</a>
+      <a class="cat-link" data-cat="business" href="/#business">Business</a>
+      <a class="cat-link" data-cat="money" href="/#money">Make Money</a>
+      <a class="cat-link" data-cat="bigtech" href="/#bigtech">Big Tech</a>
+      <a class="cat-link" data-cat="startups" href="/#startups">Startups</a>
+      <a class="cat-link" data-cat="research" href="/#research">Research</a>
+      <a class="cat-link" data-cat="policy" href="/#policy">Policy</a>
     </div>
   </div>
 
@@ -463,6 +463,39 @@ function mrk(t,q){var re=new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\
     var h=window.location.hash.replace("#","");
     var m={"tools":1,"money":1,"business":1,"bigtech":1,"startups":1,"research":1,"policy":1};
     if(m[h]) setTimeout(function(){window.setTab(h);},200);
+  })();
+  </script>
+
+  <script>
+  (function(){
+    function getHash(){ return (window.location.hash||"#all").replace("#",""); }
+    function applyFilter(cat){
+      cat = cat||"all";
+      document.querySelectorAll(".cat-link").forEach(function(a){
+        a.classList.toggle("active", a.dataset.cat===cat||(cat==="all"&&a.dataset.cat==="all"));
+      });
+      document.querySelectorAll(".post-item").forEach(function(el){
+        var elCat = el.dataset.cat||"all";
+        el.style.display = (cat==="all"||elCat===cat) ? "" : "none";
+      });
+    }
+    // Apply on load
+    applyFilter(getHash());
+    // Apply on hash change (when clicking tabs)
+    window.addEventListener("hashchange", function(){ applyFilter(getHash()); });
+    // Make tab clicks update hash
+    document.querySelectorAll(".cat-link[data-cat]").forEach(function(a){
+      a.addEventListener("click", function(e){
+        e.preventDefault();
+        var cat = this.dataset.cat;
+        // If on homepage, just change hash
+        if(window.location.pathname==="/"||window.location.pathname===""){ 
+          window.location.hash = cat;
+        } else {
+          window.location.href = "/#"+cat;
+        }
+      });
+    });
   })();
   </script>
 </body>
