@@ -56,17 +56,27 @@ title: The AI Pulse Hub - Daily AI News
   {% endif %}
 
   <div class="below-hero-row">
-    <div class="ai-market-panel">
-      <div class="ai-market-header"><span class="ai-market-title">AI Market Pulse</span><span class="ai-market-live">&#9679; Live</span></div>
-      <div class="ai-market-stocks" id="ai-stocks">
-        <div class="ai-stock-row"><span class="ai-stock-name">NVDA</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-nvda"></span></span></span><span class="ai-stock-price" id="s-nvda">&#8212;</span><span class="ai-stock-change" id="c-nvda"></span></div>
-        <div class="ai-stock-row"><span class="ai-stock-name">MSFT</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-msft"></span></span></span><span class="ai-stock-price" id="s-msft">&#8212;</span><span class="ai-stock-change" id="c-msft"></span></div>
-        <div class="ai-stock-row"><span class="ai-stock-name">GOOGL</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-googl"></span></span></span><span class="ai-stock-price" id="s-googl">&#8212;</span><span class="ai-stock-change" id="c-googl"></span></div>
-        <div class="ai-stock-row"><span class="ai-stock-name">META</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-meta"></span></span></span><span class="ai-stock-price" id="s-meta">&#8212;</span><span class="ai-stock-change" id="c-meta"></span></div>
-        <div class="ai-stock-row"><span class="ai-stock-name">AMZN</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-amzn"></span></span></span><span class="ai-stock-price" id="s-amzn">&#8212;</span><span class="ai-stock-change" id="c-amzn"></span></div>
+        <div class="ai-tool-widget">
+      <div class="ai-tool-widget-header">
+        <span class="ai-tool-widget-icon">&#9889;</span>
+        <span class="ai-tool-widget-title">AI Tool of the Day</span>
+        <span class="ai-tool-widget-badge" id="tool-badge">Loading...</span>
       </div>
-      <div class="ai-fact-box"><span class="ai-fact-label">AI Fact of the Day</span><span class="ai-fact-text" id="ai-fact">Loading...</span></div>
-      <div class="ai-market-footer">Data delayed 15 min &middot; <a href="https://finance.yahoo.com" target="_blank">Yahoo Finance</a></div>
+      <div class="ai-tool-widget-body">
+        <div class="ai-tool-logo-wrap">
+          <div class="ai-tool-logo" id="tool-logo">AI</div>
+        </div>
+        <div class="ai-tool-info">
+          <p class="ai-tool-name" id="tool-name">Loading...</p>
+          <p class="ai-tool-desc" id="tool-desc">Discovering today's top AI tool...</p>
+          <div class="ai-tool-tags" id="tool-tags"></div>
+        </div>
+      </div>
+      <a class="ai-tool-cta" id="tool-link" href="#" target="_blank" rel="noopener">Try it free &rarr;</a>
+      <div class="ai-tool-fact">
+        <span class="ai-fact-label">Did you know?</span>
+        <span id="ai-fact" class="ai-fact-text">Loading...</span>
+      </div>
     </div>
     <div class="square-ad-box"><div class="ad-label">Advertisement</div>
       <ins class="adsbygoogle" style="display:inline-block;width:300px;height:250px" data-ad-client="ca-pub-7715134134171575" data-ad-slot="auto"></ins>
@@ -174,55 +184,46 @@ document.querySelectorAll(".cat-link[data-cat]").forEach(function(a){
   if(h&&h!=="all") applyFilter(h);
 })();
 
-async function loadStocks(){
-  var CACHE="aph_s3",TTL=20*60*1000;
-  try{var c=sessionStorage.getItem(CACHE);if(c){var o=JSON.parse(c);if(Date.now()-o.ts<TTL){renderStocks(o.d);return;}}}
-  catch(e){}
-  var stocks=[{id:"nvda",sym:"NVDA.US"},{id:"msft",sym:"MSFT.US"},{id:"googl",sym:"GOOGL.US"},{id:"meta",sym:"META.US"},{id:"amzn",sym:"AMZN.US"}];
-  async function get(sym){
-    var proxies=[
-      "https://api.allorigins.win/raw?url="+encodeURIComponent("https://stooq.com/q/d/l/?s="+sym+"&i=d"),
-      "https://corsproxy.io/?"+encodeURIComponent("https://stooq.com/q/d/l/?s="+sym+"&i=d")
-    ];
-    for(var i=0;i<proxies.length;i++){
-      try{
-        var r=await fetch(proxies[i],{signal:AbortSignal.timeout(6000)});
-        var csv=await r.text();
-        var rows=csv.trim().split("\n");
-        if(rows.length<3)continue;
-        var last=rows[rows.length-1].split(",");
-        var prev=rows[rows.length-2].split(",");
-        var price=parseFloat(last[4]),prevC=parseFloat(prev[4]);
-        if(isNaN(price)||isNaN(prevC))continue;
-        return {price:price,prev:prevC};
-      }catch(e){continue;}
-    }
-    return null;
-  }
-  var results=[];
-  for(var s of stocks){
-    var data=await get(s.sym);
-    if(data){var chg=data.price-data.prev;var pct=(chg/data.prev)*100;results.push({id:s.id,price:data.price,pct:pct,up:chg>=0});}
-    else results.push({id:s.id,price:null,pct:0,up:true});
-    await new Promise(function(r){setTimeout(r,300);});
-  }
-  try{sessionStorage.setItem(CACHE,JSON.stringify({ts:Date.now(),d:results}));}catch(e){}
-  renderStocks(results);
-}
+// AI Tool of the Day
+var aiTools=[
+  {name:"ChatGPT",desc:"OpenAI's flagship AI assistant. Write, code, analyse, and create with the world's most popular AI.",badge:"Free + Pro",tags:["Productivity","Writing"],link:"https://chat.openai.com",color:"#10a37f",init:"C"},
+  {name:"Claude",desc:"Anthropic's AI assistant known for nuanced reasoning, long documents, and safe, thoughtful responses.",badge:"Free + Pro",tags:["Research","Writing"],link:"https://claude.ai",color:"#cc785c",init:"C"},
+  {name:"Midjourney",desc:"Turn text prompts into stunning, photorealistic AI art and images in seconds.",badge:"From $10/mo",tags:["Image","Creative"],link:"https://midjourney.com",color:"#000",init:"M"},
+  {name:"Cursor",desc:"The AI-first code editor. Write, edit, and debug code with GPT-4 built right in.",badge:"Free + Pro",tags:["Coding","Developer"],link:"https://cursor.sh",color:"#6366f1",init:"C"},
+  {name:"Perplexity",desc:"AI-powered search engine that gives direct answers with cited sources in real time.",badge:"Free",tags:["Search","Research"],link:"https://perplexity.ai",color:"#20b2aa",init:"P"},
+  {name:"Runway",desc:"AI video generation and editing. Create cinematic videos from text or images.",badge:"Free trial",tags:["Video","Creative"],link:"https://runwayml.com",color:"#ff4d6d",init:"R"},
+  {name:"Notion AI",desc:"AI writing and summarisation built into Notion. Drafts, rewrites, and organises your notes.",badge:"Add-on $10/mo",tags:["Productivity","Writing"],link:"https://notion.so/ai",color:"#000",init:"N"},
+  {name:"ElevenLabs",desc:"Clone your voice or generate ultra-realistic AI speech in 29 languages.",badge:"Free + Pro",tags:["Audio","Voice"],link:"https://elevenlabs.io",color:"#7c3aed",init:"E"},
+  {name:"Gamma",desc:"Create beautiful AI-powered presentations, documents and websites in minutes.",badge:"Free",tags:["Presentations","Design"],link:"https://gamma.app",color:"#f59e0b",init:"G"},
+  {name:"Suno",desc:"Generate full songs with vocals and instruments from a text prompt. Music creation for everyone.",badge:"Free + Pro",tags:["Music","Creative"],link:"https://suno.com",color:"#ec4899",init:"S"},
+  {name:"v0 by Vercel",desc:"Describe UI in plain English and get production-ready React code instantly.",badge:"Free beta",tags:["Coding","Design"],link:"https://v0.dev",color:"#000",init:"v"},
+  {name:"Kling AI",desc:"State-of-the-art AI video generation from text or images. Up to 2 min HD videos.",badge:"Free + Pro",tags:["Video","Creative"],link:"https://klingai.com",color:"#ff6b35",init:"K"},
+  {name:"Bolt",desc:"Build full-stack web apps from a prompt. AI writes, runs, and deploys your code.",badge:"Free + Pro",tags:["Coding","Developer"],link:"https://bolt.new",color:"#7c3aed",init:"B"},
+  {name:"Grok",desc:"xAI's witty, real-time AI assistant with live web access and X/Twitter integration.",badge:"X Premium",tags:["Assistant","Search"],link:"https://grok.x.ai",color:"#1da1f2",init:"G"},
+  {name:"Leonardo AI",desc:"AI image generation for game assets, concept art, and photorealistic visuals.",badge:"Free + Pro",tags:["Image","Gaming"],link:"https://leonardo.ai",color:"#f97316",init:"L"},
+  {name:"HeyGen",desc:"Create AI video avatars that speak your script in 40+ languages. Perfect for marketing.",badge:"Free trial",tags:["Video","Marketing"],link:"https://heygen.com",color:"#8b5cf6",init:"H"},
+  {name:"Descript",desc:"Edit video and podcasts by editing the transcript. AI removes filler words automatically.",badge:"Free + Pro",tags:["Video","Podcast"],link:"https://descript.com",color:"#059669",init:"D"},
+  {name:"Lovable",desc:"Build and ship full-stack web apps with AI. No coding experience needed.",badge:"Free + Pro",tags:["Coding","No-code"],link:"https://lovable.dev",color:"#ec4899",init:"L"},
+  {name:"Windsurf",desc:"AI code editor by Codeium with agentic AI that understands your whole codebase.",badge:"Free",tags:["Coding","Developer"],link:"https://codeium.com/windsurf",color:"#06b6d4",init:"W"},
+  {name:"Adobe Firefly",desc:"Adobe's AI image generator. Create and edit images directly in Photoshop and Illustrator.",badge:"Included in CC",tags:["Image","Design"],link:"https://firefly.adobe.com",color:"#ff0000",init:"F"}
+];
 
-function renderStocks(results){
-  var maxP=Math.max.apply(null,results.filter(function(p){return p.price;}).map(function(p){return Math.abs(p.pct);}));
-  if(!maxP||maxP===0)maxP=1;
-  results.forEach(function(p){
-    var pEl=document.getElementById("s-"+p.id);
-    var cEl=document.getElementById("c-"+p.id);
-    var bEl=document.getElementById("b-"+p.id);
-    if(pEl)pEl.textContent=p.price?"$"+p.price.toFixed(2):"--";
-    if(cEl&&p.price){cEl.textContent=(p.up?"+":"")+p.pct.toFixed(2)+"%";cEl.className="ai-stock-change "+(p.up?"up":"down");}
-    if(bEl&&p.price){bEl.className="ai-stock-bar-fill "+(p.up?"up":"down");setTimeout(function(){bEl.style.width=Math.max(6,Math.round((Math.abs(p.pct)/maxP)*100))+"%";},150);}
-  });
-}
-loadStocks();
+var facts=["ChatGPT reached 100M users in 2 months — the fastest app ever.","NVIDIA's GPU shortage has delayed AI projects at 60% of Fortune 500 companies.","The average AI model is retrained every 6-18 months with new data.","OpenAI was valued at $157 billion in its latest funding round.","By 2030, AI could automate 40% of current work tasks globally.","Over 70,000 AI startups are operating worldwide right now.","The global AI market will exceed $1.8 trillion by 2030.","95% of customer interactions will be AI-powered by 2025.","AI-generated content now accounts for 10% of all internet content.","Google processes 8.5 billion searches daily — most now AI-assisted."];
+
+(function(){
+  var day=new Date();
+  var idx=(day.getFullYear()*366+day.getMonth()*31+day.getDate())%aiTools.length;
+  var t=aiTools[idx];
+  var el=function(id){return document.getElementById(id);};
+  if(el("tool-name"))el("tool-name").textContent=t.name;
+  if(el("tool-desc"))el("tool-desc").textContent=t.desc;
+  if(el("tool-badge"))el("tool-badge").textContent=t.badge;
+  if(el("tool-link")){el("tool-link").href=t.link;}
+  if(el("tool-logo")){el("tool-logo").textContent=t.init;el("tool-logo").style.background=t.color;}
+  if(el("tool-tags")){el("tool-tags").innerHTML=t.tags.map(function(g){return'<span class="ai-tool-tag">'+g+'</span>';}).join("");}
+  var factIdx=(day.getDate()+day.getMonth())%facts.length;
+  if(el("ai-fact"))el("ai-fact").textContent=facts[factIdx];
+})();
 
 var facts=["The global AI market is projected to reach $1.8 trillion by 2030.","ChatGPT reached 100 million users in just 2 months.","NVIDIA supplies over 80% of AI training chips worldwide.","Over 77% of devices use AI in some form.","AI could add $15.7 trillion to the global economy by 2030.","There are now over 70,000 AI startups globally.","AI is expected to automate 40% of work tasks by 2035.","OpenAI was valued at $157 billion in its latest funding round."];
 var factEl=document.getElementById("ai-fact");
