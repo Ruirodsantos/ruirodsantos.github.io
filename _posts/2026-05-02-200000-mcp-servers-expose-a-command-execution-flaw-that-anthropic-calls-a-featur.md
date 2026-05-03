@@ -3,7 +3,7 @@ layout: post
 title: "200,000 MCP servers expose a command execution flaw that Anthropic calls a feature"
 date: 2026-05-02
 excerpt: "Anthropic created the Model Context Protocol as the open standard for AI agent-to-tool communication. OpenAI adopted it in March 2025. Google DeepMind followed..."
-categories: [money]
+categories: [policy]
 image: "https://images.pexels.com/photos/5480781/pexels-photo-5480781.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/security/mcp-stdio-flaw-200000-ai-agent-servers-exposed-ox-security-audit"
 ---

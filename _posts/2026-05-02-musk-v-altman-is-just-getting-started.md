@@ -3,7 +3,7 @@ layout: post
 title: "Musk v. Altman is just getting started"
 date: 2026-05-02
 excerpt: "Elon Musk spent the better part of three days&#160;on the witness stand&#160;this week&#160;in his lawsuit against OpenAI, and&#160;it&#8217;s&#160;already get..."
-categories: [business]
+categories: [policy]
 image: "https://images.pexels.com/photos/28123191/pexels-photo-28123191.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/video/musk-v-altman-is-just-getting-started/"
 ---

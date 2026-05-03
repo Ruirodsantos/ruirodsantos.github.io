@@ -3,7 +3,7 @@ layout: post
 title: "Hidden IT problems are quietly creating risk, shadow IT, and lost productivity"
 date: 2026-05-02
 excerpt: "Presented by TeamViewerEnterprise technology failures are largely invisible. Research from TeamViewer, based on a global survey of 4,200 managers and employees..."
-categories: [business]
+categories: [research]
 image: "https://images.pexels.com/photos/1888011/pexels-photo-1888011.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/technology/hidden-it-problems-are-quietly-creating-risk-shadow-it-and-lost-productivity"
 ---

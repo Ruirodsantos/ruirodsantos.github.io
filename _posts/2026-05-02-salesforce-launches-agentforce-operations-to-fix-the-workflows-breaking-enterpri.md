@@ -3,7 +3,7 @@ layout: post
 title: "Salesforce launches Agentforce Operations to fix the workflows breaking enterprise AI"
 date: 2026-05-02
 excerpt: "Enterprise AI teams are hitting a wall — not because their models can&#x27;t reason, but because the workflows underneath them were never built for agents. Tas..."
-categories: [money]
+categories: [tools]
 image: "https://images.pexels.com/photos/3992926/pexels-photo-3992926.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/orchestration/salesforce-launches-agentforce-operations-to-fix-the-workflows-breaking-enterprise-ai"
 ---

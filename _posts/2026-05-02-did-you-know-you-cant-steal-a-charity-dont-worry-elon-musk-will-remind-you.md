@@ -3,7 +3,7 @@ layout: post
 title: "Did you know you can’t steal a charity? Don’t worry. Elon Musk will remind you."
 date: 2026-05-02
 excerpt: "Elon Musk spent the better part of three days on the witness stand this week in his lawsuit against OpenAI, and it&#8217;s already getting messy. Emails, texts..."
-categories: [business]
+categories: [policy]
 image: "https://images.pexels.com/photos/13871402/pexels-photo-13871402.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://techcrunch.com/podcast/did-you-know-you-cant-steal-a-charity-dont-worry-elon-musk-will-remind-you/"
 ---

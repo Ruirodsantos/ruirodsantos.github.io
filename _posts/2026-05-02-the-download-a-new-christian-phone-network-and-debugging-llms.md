@@ -3,7 +3,7 @@ layout: post
 title: "The Download: a new Christian phone network, and debugging LLMs"
 date: 2026-05-02
 excerpt: "This is today&#8217;s edition of The Download, our weekday newsletter that provides a daily dose of what&#8217;s going on in the world of technology. A new US..."
-categories: [business]
+categories: [bigtech]
 image: "https://images.pexels.com/photos/5053847/pexels-photo-5053847.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://www.technologyreview.com/2026/05/01/1136762/the-download-christian-phone-network-debugging-llms/"
 ---

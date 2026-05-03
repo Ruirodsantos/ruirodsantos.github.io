@@ -3,7 +3,7 @@ layout: post
 title: "The Download: the North Pole’s future and humanoid data"
 date: 2026-05-03
 excerpt: "This is today&#8217;s edition of The Download, our weekday newsletter that provides a daily dose of what&#8217;s going on in the world of technology. Digging f..."
-categories: [research]
+categories: [ai]
 image: "https://images.pexels.com/photos/31888574/pexels-photo-31888574.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://www.technologyreview.com/2026/04/30/1136713/the-download-north-pole-future-humanoid-data/"
 ---

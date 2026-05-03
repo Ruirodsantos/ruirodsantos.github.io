@@ -3,7 +3,7 @@ layout: post
 title: "The AI scaffolding layer is collapsing. LlamaIndex's CEO explains what survives."
 date: 2026-05-02
 excerpt: "The scaffolding layer that developers once needed to ship LLM applications — indexing layers, query engines, retrieval pipelines, carefully orchestrated agent..."
-categories: [startups]
+categories: [tools]
 image: "https://images.pexels.com/photos/18069814/pexels-photo-18069814.png?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
 source_url: "https://venturebeat.com/infrastructure/the-ai-scaffolding-layer-is-collapsing-llamaindexs-ceo-explains-what-survives"
 ---
