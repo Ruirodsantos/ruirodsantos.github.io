@@ -1,6 +1,6 @@
 ---
 layout: default
-title: AI Pulse - Daily AI news that makes sense
+title: The AI Pulse Hub - Daily AI News
 ---
 {% assign posts = site.posts %}
 {% assign hero = posts[0] %}
@@ -10,11 +10,9 @@ title: AI Pulse - Daily AI news that makes sense
 {% assign rest = posts | slice: 4, 100 %}
 
 <div class="page-wrap">
-  <div class="ad-banner">Advertisement</div>
 
-  <!-- SCROLLING NEWS TICKER -->
   <div class="news-ticker-wrap">
-    <div class="news-ticker-label">Latest</div>
+    <div class="news-ticker-label">Breaking</div>
     <div class="news-ticker-track">
       <div class="news-ticker-inner" id="ticker-inner">
         {% for post in posts limit:10 %}
@@ -30,403 +28,210 @@ title: AI Pulse - Daily AI news that makes sense
   </div>
 
   {% if hero %}
-  <div class="newspaper">
-
-    <!-- HERO ROW: hero image LEFT | sidebar RIGHT -->
-    <div class="hero-row">
-
-      <!-- LEFT: Big hero card -->
-      <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="{{ hero.categories | first | default: 'all' }}">
-        <div class="hero-img" style="background-image:url('{{ hero.image }}')">
-          <div class="hero-overlay"></div>
-          <div class="hero-content">
-            <span class="hero-cat">Top Story</span>
-            <h1 class="hero-title">{{ hero.title }}</h1>
-            <p class="hero-excerpt">{{ hero.excerpt | truncate: 130 }}</p>
-            <span class="hero-meta">{{ hero.date | date: "%B %d, %Y" }}</span>
-          </div>
+  <div class="hero-row">
+    <a class="hero-card post-item" href="{{ hero.url | relative_url }}" data-cat="{{ hero.categories | first | default: "all" }}">
+      <div class="hero-img" style="background-image:url('{{ hero.image }}')">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+          <span class="hero-cat">Top Story</span>
+          <h1 class="hero-title">{{ hero.title }}</h1>
+          <p class="hero-excerpt">{{ hero.excerpt | strip_html | truncate: 130 }}</p>
+          <span class="hero-meta">{{ hero.date | date: "%B %d, %Y" }}</span>
         </div>
-      </a>
-
-      <!-- RIGHT: Trending + AI Market Info panel -->
-      <div class="sidebar">
-        <p class="sidebar-header">Trending Now</p>
-        {% for post in posts limit:5 %}
-        <a class="sidebar-card" href="{{ post.url | relative_url }}">
-          <div class="sidebar-num">0{{ forloop.index }}</div>
+      </div>
+    </a>
+    <div class="sidebar">
+      <p class="sidebar-header">Trending Now</p>
+      {% for post in posts limit:5 %}
+      <a class="sidebar-card post-item" href="{{ post.url | relative_url }}" data-cat="{{ post.categories | first | default: "all" }}">
+        <div class="sidebar-num">0{{ forloop.index }}</div>
+        <div>
           <div class="sidebar-title-text">{{ post.title | truncate: 65 }}</div>
           <div class="sidebar-meta">{{ post.date | date: "%b %d" }}</div>
-        </a>
-        {% endfor %}
-
-
-      </div>
-    </div>
-
-
-    <!-- BELOW HERO: Stocks LEFT + Ad RIGHT -->
-    <div class="below-hero-row">
-
-      <!-- STOCKS: simple vertical list, fills full left column -->
-      <div class="ai-market-panel">
-        <div class="ai-market-header">
-          <span class="ai-market-title">AI Market Pulse</span>
-          <span class="ai-market-live">&#9679; Live</span>
-        </div>
-        <div class="ai-market-stocks" id="ai-stocks">
-          <div class="ai-stock-row">
-            <span class="ai-stock-name">NVDA</span>
-            <span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-nvda"></span></span></span>
-            <span class="ai-stock-price" id="s-nvda">&#8212;</span>
-            <span class="ai-stock-change" id="c-nvda"></span>
-          </div>
-          <div class="ai-stock-row">
-            <span class="ai-stock-name">MSFT</span>
-            <span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-msft"></span></span></span>
-            <span class="ai-stock-price" id="s-msft">&#8212;</span>
-            <span class="ai-stock-change" id="c-msft"></span>
-          </div>
-          <div class="ai-stock-row">
-            <span class="ai-stock-name">GOOGL</span>
-            <span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-googl"></span></span></span>
-            <span class="ai-stock-price" id="s-googl">&#8212;</span>
-            <span class="ai-stock-change" id="c-googl"></span>
-          </div>
-          <div class="ai-stock-row">
-            <span class="ai-stock-name">META</span>
-            <span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-meta"></span></span></span>
-            <span class="ai-stock-price" id="s-meta">&#8212;</span>
-            <span class="ai-stock-change" id="c-meta"></span>
-          </div>
-          <div class="ai-stock-row">
-            <span class="ai-stock-name">AMZN</span>
-            <span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-amzn"></span></span></span>
-            <span class="ai-stock-price" id="s-amzn">&#8212;</span>
-            <span class="ai-stock-change" id="c-amzn"></span>
-          </div>
-        </div>
-        <div class="ai-fact-box">
-          <span class="ai-fact-label">AI Fact of the Day</span>
-          <span class="ai-fact-text" id="ai-fact">Loading...</span>
-        </div>
-        <div class="ai-market-footer">Data delayed 15 min &middot; <a href="https://finance.yahoo.com" target="_blank" rel="noopener">Yahoo Finance</a></div>
-      </div>
-
-      <!-- AD 300x250 RIGHT -->
-      <div class="square-ad-box">
-        <div class="ad-label">Advertisement</div>
-        <ins class="adsbygoogle" style="display:inline-block;width:300px;height:250px" data-ad-client="ca-pub-7715134134171575" data-ad-slot="auto"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-      </div>
-
-    </div>
-    <!-- LATEST 3 STORIES -->
-    {% if s1 or s2 or s3 %}
-    <div class="section-header">
-      <div class="section-header-accent"></div>
-      <span class="section-header-title">Latest Stories</span>
-      <div class="section-header-line"></div>
-    </div>
-    <div class="grid-3 grid-auto" style="margin-bottom:20px">
-      {% if s1 %}
-      <a class="grid-card grid-card-auto post-item" href="{{ s1.url | relative_url }}" data-cat="{{ s1.categories | first | default: 'all' }}">
-        <div class="grid-img grid-img-tall" style="background-image:url('{{ s1.image }}')"></div>
-        <div class="grid-body">
-          <p class="grid-cat">{{ s1.categories | first | capitalize | default: "AI" }}</p>
-          <p class="grid-title">{{ s1.title }}</p>
-          <p class="grid-excerpt">{{ s1.excerpt | truncate: 90 }}</p>
-          <p class="grid-meta">{{ s1.date | date: "%B %d, %Y" }}</p>
         </div>
       </a>
-      {% endif %}
-      {% if s2 %}
-      <a class="grid-card grid-card-auto post-item" href="{{ s2.url | relative_url }}" data-cat="{{ s2.categories | first | default: 'all' }}">
-        <div class="grid-img grid-img-tall" style="background-image:url('{{ s2.image }}')"></div>
-        <div class="grid-body">
-          <p class="grid-cat">{{ s2.categories | first | capitalize | default: "AI" }}</p>
-          <p class="grid-title">{{ s2.title }}</p>
-          <p class="grid-excerpt">{{ s2.excerpt | truncate: 90 }}</p>
-          <p class="grid-meta">{{ s2.date | date: "%B %d, %Y" }}</p>
-        </div>
-      </a>
-      {% endif %}
-      {% if s3 %}
-      <a class="grid-card grid-card-auto post-item" href="{{ s3.url | relative_url }}" data-cat="{{ s3.categories | first | default: 'all' }}">
-        <div class="grid-img grid-img-tall" style="background-image:url('{{ s3.image }}')"></div>
-        <div class="grid-body">
-          <p class="grid-cat">{{ s3.categories | first | capitalize | default: "AI" }}</p>
-          <p class="grid-title">{{ s3.title }}</p>
-          <p class="grid-excerpt">{{ s3.excerpt | truncate: 90 }}</p>
-          <p class="grid-meta">{{ s3.date | date: "%B %d, %Y" }}</p>
-        </div>
-      </a>
-      {% endif %}
+      {% endfor %}
     </div>
-    {% endif %}
-
-    <!-- EARNAPP -->
-    <div class="earnapp-box">
-      <div class="earnapp-body">
-        <div class="earnapp-tag">Passive Income Opportunity</div>
-        <h2 class="earnapp-title">Earn money from your unused internet</h2>
-        <p class="earnapp-sub">EarnApp pays you for sharing your unused bandwidth - no effort required. Install once, run in the background, get paid monthly via PayPal or gift cards.</p>
-      </div>
-      <a class="earnapp-cta" href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener">Start earning free<small>Join via our link</small></a>
-    </div>
-
-    <!-- NEWSLETTER -->
-    <div class="newsletter" id="newsletter-section">
-      <div class="newsletter-tag">Free Newsletter</div>
-      <h2 class="newsletter-title">Get AI news in your inbox every morning</h2>
-      <p class="newsletter-sub">Join readers who start their day with AI Pulse. No spam, unsubscribe anytime.</p>
-      <div class="newsletter-form">
-        <input class="newsletter-input" type="email" id="nl-email" placeholder="your@email.com"/>
-        <button class="newsletter-btn" onclick="subscribeNewsletter()">Subscribe free</button>
-      </div>
-      <p id="nl-msg" style="font-size:13px;color:var(--green);margin-top:10px;display:none">Thanks! We will be in touch soon.</p>
-    </div>
-
-    <div class="ad-banner">Advertisement</div>
-
-    <!-- MORE STORIES -->
-    {% if rest.size > 0 %}
-    <div class="section-header">
-      <div class="section-header-accent"></div>
-      <span class="section-header-title">More Stories</span>
-      <div class="section-header-line"></div>
-    </div>
-    <div class="content-with-sidebar">
-      <div class="grid-3 grid-auto">
-        {% for post in rest limit:24 %}
-        <a class="grid-card grid-card-auto post-item" href="{{ post.url | relative_url }}" data-cat="{{ post.categories | first | default: 'all' }}" data-title="{{ post.title | downcase }}">
-          <div class="grid-img grid-img-short" style="background-image:url('{{ post.image }}')"></div>
-          <div class="grid-body">
-            <p class="grid-cat">{{ post.categories | first | capitalize | default: "AI" }}</p>
-            <p class="grid-title">{{ post.title | truncate: 65 }}</p>
-            <p class="grid-excerpt">{{ post.excerpt | truncate: 80 }}</p>
-            <p class="grid-meta">{{ post.date | date: "%b %d, %Y" }}</p>
-          </div>
-        </a>
-        {% endfor %}
-      </div>
-      <div>
-        <div class="post-sidebar-widget">
-          <p class="post-sidebar-widget-title">About AI Pulse</p>
-          <p style="font-size:13px;color:#495057;line-height:1.6;margin-bottom:12px">We explain AI in plain English and show you how to turn it into real opportunities. Published daily, free forever.</p>
-          <a href="/about/" style="display:inline-block;background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:8px 16px;border-radius:6px">Read all stories</a>
-        </div>
-        <div class="sidebar-ad-widget">Advertisement</div>
-        <div class="post-sidebar-widget">
-          <p class="post-sidebar-widget-title">Quick Reads</p>
-          {% for post in posts limit:5 offset:3 %}
-          <a class="list-card" href="{{ post.url | relative_url }}" style="display:grid;text-decoration:none">
-            <div class="list-img" style="background-image:url('{{ post.image }}')"></div>
-            <div><p class="list-title">{{ post.title | truncate: 55 }}</p><p class="list-meta">{{ post.date | date: "%b %d" }}</p></div>
-          </a>
-          {% endfor %}
-        </div>
-        <div class="earnapp-box" style="margin-top:14px;padding:18px;flex-direction:column;gap:12px">
-          <div><div class="earnapp-tag" style="margin-bottom:6px">Earn passive income</div>
-          <p style="font-size:14px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:10px">Get paid for your unused internet bandwidth</p></div>
-          <a href="https://earnapp.com/i/7V4ffquG" target="_blank" rel="noopener" class="earnapp-cta" style="padding:10px 16px">Join EarnApp free</a>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    <div class="ad-banner">Advertisement</div>
   </div>
-  {% else %}
-  <div class="empty-state"><p>First stories arriving soon. Check back shortly.</p></div>
   {% endif %}
+
+  <div class="below-hero-row">
+    <div class="ai-market-panel">
+      <div class="ai-market-header"><span class="ai-market-title">AI Market Pulse</span><span class="ai-market-live">&#9679; Live</span></div>
+      <div class="ai-market-stocks" id="ai-stocks">
+        <div class="ai-stock-row"><span class="ai-stock-name">NVDA</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-nvda"></span></span></span><span class="ai-stock-price" id="s-nvda">&#8212;</span><span class="ai-stock-change" id="c-nvda"></span></div>
+        <div class="ai-stock-row"><span class="ai-stock-name">MSFT</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-msft"></span></span></span><span class="ai-stock-price" id="s-msft">&#8212;</span><span class="ai-stock-change" id="c-msft"></span></div>
+        <div class="ai-stock-row"><span class="ai-stock-name">GOOGL</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-googl"></span></span></span><span class="ai-stock-price" id="s-googl">&#8212;</span><span class="ai-stock-change" id="c-googl"></span></div>
+        <div class="ai-stock-row"><span class="ai-stock-name">META</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-meta"></span></span></span><span class="ai-stock-price" id="s-meta">&#8212;</span><span class="ai-stock-change" id="c-meta"></span></div>
+        <div class="ai-stock-row"><span class="ai-stock-name">AMZN</span><span class="ai-stock-bar-wrap"><span class="ai-stock-bar"><span class="ai-stock-bar-fill" id="b-amzn"></span></span></span><span class="ai-stock-price" id="s-amzn">&#8212;</span><span class="ai-stock-change" id="c-amzn"></span></div>
+      </div>
+      <div class="ai-fact-box"><span class="ai-fact-label">AI Fact of the Day</span><span class="ai-fact-text" id="ai-fact">Loading...</span></div>
+      <div class="ai-market-footer">Data delayed 15 min &middot; <a href="https://finance.yahoo.com" target="_blank">Yahoo Finance</a></div>
+    </div>
+    <div class="square-ad-box"><div class="ad-label">Advertisement</div>
+      <ins class="adsbygoogle" style="display:inline-block;width:300px;height:250px" data-ad-client="ca-pub-7715134134171575" data-ad-slot="auto"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+  </div>
+
+  {% if s1 or s2 or s3 %}
+  <div class="section-header"><div class="section-header-accent"></div><span class="section-header-title">Latest Stories</span><div class="section-header-line"></div></div>
+  <div class="grid-3 grid-auto" style="margin-bottom:20px">
+    {% for post in posts limit:3 offset:1 %}
+    <a class="grid-card grid-card-auto post-item" href="{{ post.url | relative_url }}" data-cat="{{ post.categories | first | default: "all" }}">
+      <div class="grid-img grid-img-tall" style="background-image:url('{{ post.image }}')"></div>
+      <div class="grid-body">
+        <p class="grid-cat">{{ post.categories | first | upcase | default: "AI" }}</p>
+        <p class="grid-title">{{ post.title }}</p>
+        <p class="grid-excerpt">{{ post.excerpt | strip_html | truncate: 90 }}</p>
+        <p class="grid-meta">{{ post.date | date: "%B %d, %Y" }}</p>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="newsletter" id="newsletter-section">
+    <div class="newsletter-tag">Free Newsletter</div>
+    <h2 class="newsletter-title">Get AI news in your inbox every morning</h2>
+    <p class="newsletter-sub">Join readers who start their day with AI Pulse. No spam, unsubscribe anytime.</p>
+    <div class="newsletter-form"><input class="newsletter-input" type="email" id="nl-email" placeholder="your@email.com"/><button class="newsletter-btn" onclick="subscribeNewsletter()">Subscribe free</button></div>
+    <p id="nl-msg" style="font-size:13px;color:var(--green);margin-top:10px;display:none">Thanks! We will be in touch soon.</p>
+  </div>
+
+  {% if rest.size > 0 %}
+  <div class="section-header"><div class="section-header-accent"></div><span class="section-header-title">More Stories</span><div class="section-header-line"></div></div>
+  <div class="content-with-sidebar">
+    <div class="grid-3 grid-auto">
+      {% for post in rest limit:30 %}
+      <a class="grid-card grid-card-auto post-item" href="{{ post.url | relative_url }}" data-cat="{{ post.categories | first | default: "all" }}">
+        <div class="grid-img grid-img-short" style="background-image:url('{{ post.image }}')"></div>
+        <div class="grid-body">
+          <p class="grid-cat">{{ post.categories | first | upcase | default: "AI" }}</p>
+          <p class="grid-title">{{ post.title | truncate: 65 }}</p>
+          <p class="grid-excerpt">{{ post.excerpt | strip_html | truncate: 80 }}</p>
+          <p class="grid-meta">{{ post.date | date: "%b %d, %Y" }}</p>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    <div>
+      <div class="post-sidebar-widget"><p class="post-sidebar-widget-title">About The AI Pulse Hub</p>
+        <p style="font-size:13px;color:#495057;line-height:1.6;margin-bottom:12px">Daily AI news explained simply. No jargon, no hype.</p>
+        <a href="/" style="display:inline-block;background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:8px 16px;border-radius:6px">All stories</a>
+      </div>
+      <div class="post-sidebar-widget" style="margin-top:16px"><p class="post-sidebar-widget-title">Quick Reads</p>
+        {% for post in posts limit:5 offset:3 %}
+        <a class="list-card" href="{{ post.url | relative_url }}" style="display:grid;text-decoration:none">
+          <div class="list-img" style="background-image:url('{{ post.image }}')"></div>
+          <div><p class="list-title">{{ post.title | truncate: 55 }}</p><p class="list-meta">{{ post.date | date: "%b %d" }}</p></div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 
 <script>
-// ââ Category tab filter ââ
-window.setTab = function(cat) {
-  // Update active tab button
-  document.querySelectorAll('.cat-tab-btn').forEach(function(btn) {
-    btn.classList.toggle('active', btn.dataset.cat === cat);
-  });
-  // Show/hide post cards
-  document.querySelectorAll('.post-item').forEach(function(card) {
-    if (cat === 'all') {
-      card.style.display = '';
-    } else {
-      card.style.display = (card.dataset.cat === cat) ? '' : 'none';
-    }
-  });
-  // Update active nav link
-  document.querySelectorAll('.nav-links a').forEach(function(a) {
-    a.classList.remove('nav-active');
-  });
-  // Store active tab
-  window._activeTab = cat;
-};
-
-// Check URL hash on load
-(function() {
-  var hash = window.location.hash.replace('#','');
-  var tabMap = {'tools':'tools','money':'money','business':'business','bigtech':'bigtech','startups':'startups','research':'research','policy':'policy'};
-  if (tabMap[hash]) {
-    setTimeout(function(){ window.setTab(tabMap[hash]); }, 100);
-  }
-})();
-
-// Scrolling ticker
 (function(){
-  const inner=document.getElementById('ticker-inner');
+  var inner=document.getElementById("ticker-inner");
   if(!inner)return;
-  let pos=0,paused=false;
-  inner.parentElement.addEventListener('mouseenter',()=>paused=true);
-  inner.parentElement.addEventListener('mouseleave',()=>paused=false);
-  function tick(){
-    if(!paused){pos-=0.5;if(Math.abs(pos)>=inner.scrollWidth/2)pos=0;inner.style.transform='translateX('+pos+'px)';}
-    requestAnimationFrame(tick);
-  }
+  var pos=0,paused=false;
+  inner.parentElement.addEventListener("mouseenter",function(){paused=true;});
+  inner.parentElement.addEventListener("mouseleave",function(){paused=false;});
+  function tick(){if(!paused){pos-=0.5;if(Math.abs(pos)>=inner.scrollWidth/2)pos=0;inner.style.transform="translateX("+pos+"px)";}requestAnimationFrame(tick);}
   tick();
 })();
 
-// AI Stock prices via Yahoo Finance (free, no key needed)
-const stocks = [
-  {id:'nvda', sym:'NVDA'},
-  {id:'msft', sym:'MSFT'},
-  {id:'googl', sym:'GOOGL'},
-  {id:'meta',  sym:'META'},
-  {id:'amzn',  sym:'AMZN'}
-];
-async function loadStocks(){
-  // Use stooq.com â free, no API key, no CORS issues, real-time data
-  const CACHE='aph_stocks_v2';
-  const TTL=20*60*1000;
-  try{
-    const c=sessionStorage.getItem(CACHE);
-    if(c){const o=JSON.parse(c);if(Date.now()-o.ts<TTL){renderStocks(o.d);return;}}
-  }catch(e){}
+function applyFilter(cat){
+  cat=cat||"all";
+  document.querySelectorAll(".cat-link[data-cat]").forEach(function(a){
+    a.classList.toggle("active",a.dataset.cat===cat);
+  });
+  document.querySelectorAll(".post-item").forEach(function(el){
+    var elCat=(el.dataset.cat||"all");
+    el.style.display=(cat==="all"||elCat===cat)?"":"none";
+  });
+}
 
-  const stocks=[
-    {id:'nvda',sym:'NVDA.US'},
-    {id:'msft',sym:'MSFT.US'},
-    {id:'googl',sym:'GOOGL.US'},
-    {id:'meta',sym:'META.US'},
-    {id:'amzn',sym:'AMZN.US'}
-  ];
-
-  async function getQuote(sym){
-    try{
-      // stooq CSV: date,open,high,low,close,volume
-      const url='https://stooq.com/q/d/l/?s='+sym+'&i=d';
-      const proxy='https://api.allorigins.win/raw?url='+encodeURIComponent(url);
-      const r=await fetch(proxy,{signal:AbortSignal.timeout(7000)});
-      const csv=await r.text();
-      const rows=csv.trim().split('\n');
-      if(rows.length<3) return null;
-      // Get last two rows for price + prev close
-      const last=rows[rows.length-1].split(',');
-      const prev=rows[rows.length-2].split(',');
-      const price=parseFloat(last[4]);
-      const prevClose=parseFloat(prev[4]);
-      if(isNaN(price)||isNaN(prevClose)) return null;
-      return {price,prev:prevClose};
-    }catch(e){return null;}
-  }
-
-  // Also try corsproxy.io as backup per stock
-  async function getQuoteFallback(sym){
-    try{
-      const url='https://stooq.com/q/d/l/?s='+sym+'&i=d';
-      const proxy='https://corsproxy.io/?'+encodeURIComponent(url);
-      const r=await fetch(proxy,{signal:AbortSignal.timeout(7000)});
-      const csv=await r.text();
-      const rows=csv.trim().split('\n');
-      if(rows.length<3) return null;
-      const last=rows[rows.length-1].split(',');
-      const prev=rows[rows.length-2].split(',');
-      const price=parseFloat(last[4]);
-      const prevClose=parseFloat(prev[4]);
-      if(isNaN(price)||isNaN(prevClose)) return null;
-      return {price,prev:prevClose};
-    }catch(e){return null;}
-  }
-
-  const results=[];
-  for(const s of stocks){
-    let data=await getQuote(s.sym);
-    if(!data) data=await getQuoteFallback(s.sym);
-    if(data){
-      const chg=data.price-data.prev;
-      const pct=((chg/data.prev)*100);
-      results.push({id:s.id,price:data.price,pct,up:chg>=0});
+document.querySelectorAll(".cat-link[data-cat]").forEach(function(a){
+  a.addEventListener("click",function(e){
+    e.preventDefault();
+    var cat=this.dataset.cat;
+    if(window.location.pathname==="/"||window.location.pathname==="/index.html"){
+      history.replaceState(null,"","/#"+cat);
+      applyFilter(cat);
     } else {
-      results.push({id:s.id,price:null,pct:0,up:true});
+      window.location.href="/#"+cat;
     }
-    await new Promise(r=>setTimeout(r,300));
+  });
+});
+
+(function(){
+  var h=(window.location.hash||"").replace("#","");
+  if(h&&h!=="all") applyFilter(h);
+})();
+
+async function loadStocks(){
+  var CACHE="aph_s3",TTL=20*60*1000;
+  try{var c=sessionStorage.getItem(CACHE);if(c){var o=JSON.parse(c);if(Date.now()-o.ts<TTL){renderStocks(o.d);return;}}}
+  catch(e){}
+  var stocks=[{id:"nvda",sym:"NVDA.US"},{id:"msft",sym:"MSFT.US"},{id:"googl",sym:"GOOGL.US"},{id:"meta",sym:"META.US"},{id:"amzn",sym:"AMZN.US"}];
+  async function get(sym){
+    var proxies=[
+      "https://api.allorigins.win/raw?url="+encodeURIComponent("https://stooq.com/q/d/l/?s="+sym+"&i=d"),
+      "https://corsproxy.io/?"+encodeURIComponent("https://stooq.com/q/d/l/?s="+sym+"&i=d")
+    ];
+    for(var i=0;i<proxies.length;i++){
+      try{
+        var r=await fetch(proxies[i],{signal:AbortSignal.timeout(6000)});
+        var csv=await r.text();
+        var rows=csv.trim().split("\n");
+        if(rows.length<3)continue;
+        var last=rows[rows.length-1].split(",");
+        var prev=rows[rows.length-2].split(",");
+        var price=parseFloat(last[4]),prevC=parseFloat(prev[4]);
+        if(isNaN(price)||isNaN(prevC))continue;
+        return {price:price,prev:prevC};
+      }catch(e){continue;}
+    }
+    return null;
+  }
+  var results=[];
+  for(var s of stocks){
+    var data=await get(s.sym);
+    if(data){var chg=data.price-data.prev;var pct=(chg/data.prev)*100;results.push({id:s.id,price:data.price,pct:pct,up:chg>=0});}
+    else results.push({id:s.id,price:null,pct:0,up:true});
+    await new Promise(function(r){setTimeout(r,300);});
   }
   try{sessionStorage.setItem(CACHE,JSON.stringify({ts:Date.now(),d:results}));}catch(e){}
   renderStocks(results);
 }
 
 function renderStocks(results){
-  const maxPct=Math.max(...results.filter(p=>p.price).map(p=>Math.abs(p.pct)),0.1);
-  results.forEach(p=>{
-    const pEl=document.getElementById('s-'+p.id);
-    const cEl=document.getElementById('c-'+p.id);
-    const bEl=document.getElementById('b-'+p.id);
-    if(pEl) pEl.textContent=p.price?'$'+p.price.toFixed(2):'â';
-    if(cEl&&p.price){
-      cEl.textContent=(p.up?'+':'')+p.pct.toFixed(2)+'%';
-      cEl.className='ai-stock-change '+(p.up?'up':'down');
-    }
-    if(bEl&&p.price){
-      bEl.className='ai-stock-bar-fill '+(p.up?'up':'down');
-      setTimeout(()=>{bEl.style.width=Math.max(6,Math.round((Math.abs(p.pct)/maxPct)*100))+'%';},150);
-    }
+  var maxP=Math.max.apply(null,results.filter(function(p){return p.price;}).map(function(p){return Math.abs(p.pct);}));
+  if(!maxP||maxP===0)maxP=1;
+  results.forEach(function(p){
+    var pEl=document.getElementById("s-"+p.id);
+    var cEl=document.getElementById("c-"+p.id);
+    var bEl=document.getElementById("b-"+p.id);
+    if(pEl)pEl.textContent=p.price?"$"+p.price.toFixed(2):"--";
+    if(cEl&&p.price){cEl.textContent=(p.up?"+":"")+p.pct.toFixed(2)+"%";cEl.className="ai-stock-change "+(p.up?"up":"down");}
+    if(bEl&&p.price){bEl.className="ai-stock-bar-fill "+(p.up?"up":"down");setTimeout(function(){bEl.style.width=Math.max(6,Math.round((Math.abs(p.pct)/maxP)*100))+"%";},150);}
   });
 }
 loadStocks();
 
-// Rotate AI facts
-const facts=[
-  'The global AI market is projected to reach $1.8 trillion by 2030.',
-  'ChatGPT reached 100 million users in just 2 months - the fastest app ever.',
-  'NVIDIA supplies over 80% of AI training chips worldwide.',
-  'Over 77% of devices currently use AI in some form.',
-  'AI could contribute up to $15.7 trillion to the global economy by 2030.',
-  'The average AI startup raised $22M in seed funding in 2024.',
-  'Google processes 8.5 billion searches per day - most now AI-assisted.',
-  'There are now over 70,000 AI startups globally.',
-  'AI is expected to automate 40% of work tasks by 2035.',
-  'OpenAI was valued at $157 billion in its latest funding round.'
-];
-const factEl = document.getElementById('ai-fact');
-if(factEl){
-  const today = new Date().getDate();
-  factEl.textContent = facts[today % facts.length];
-}
-
-// Category filtering
-document.querySelectorAll('.cat-link').forEach(link=>{
-  link.addEventListener('click',e=>{
-    e.preventDefault();
-    const cat=link.dataset.cat;
-    document.querySelectorAll('.cat-link').forEach(l=>l.classList.remove('active'));
-    link.classList.add('active');
-    const items=document.querySelectorAll('.post-item');
-    if(!items.length){window.location.href='/?cat='+cat;return;}
-    const kw={all:[],tools:['tool','gpt','claude','gemini','copilot','app','model','api','chatbot','assistant','software','platform'],business:['business','startup','company','market','revenue','funding','enterprise','saas','product'],money:['money','earn','income','salary','job','freelance','profit','cost','price','pay','wage'],bigtech:['google','meta','microsoft','apple','amazon','openai','anthropic','nvidia','tesla'],startups:['startup','founder','seed','series','venture','raise','funding','launch'],research:['research','study','paper','university','lab','science','discover','arxiv','academic'],policy:['law','regulation','policy','government','eu','congress','bill','rule','ban','legal','privacy']};
-    const keys=kw[cat]||[];
-    items.forEach(item=>{
-      if(cat==='all'){item.classList.remove('hidden');return;}
-      const title=(item.dataset.title||item.querySelector('.grid-title,.hero-title')?.textContent||'').toLowerCase();
-      keys.some(k=>title.includes(k))?item.classList.remove('hidden'):item.classList.add('hidden');
-    });
-    window.scrollTo({top:0,behavior:'smooth'});
-  });
-});
+var facts=["The global AI market is projected to reach $1.8 trillion by 2030.","ChatGPT reached 100 million users in just 2 months.","NVIDIA supplies over 80% of AI training chips worldwide.","Over 77% of devices use AI in some form.","AI could add $15.7 trillion to the global economy by 2030.","There are now over 70,000 AI startups globally.","AI is expected to automate 40% of work tasks by 2035.","OpenAI was valued at $157 billion in its latest funding round."];
+var factEl=document.getElementById("ai-fact");
+if(factEl)factEl.textContent=facts[new Date().getDate()%facts.length];
 
 function subscribeNewsletter(){
-  const email=document.getElementById('nl-email').value.trim();
-  if(!email||!email.includes('@')){alert('Please enter a valid email.');return;}
-  document.getElementById('nl-email').value='';
-  document.getElementById('nl-msg').style.display='block';
+  var email=document.getElementById("nl-email").value.trim();
+  if(!email||!email.includes("@")){alert("Please enter a valid email.");return;}
+  document.getElementById("nl-email").value="";
+  document.getElementById("nl-msg").style.display="block";
 }
 </script>
