@@ -91,7 +91,7 @@ layout: default
   <!-- Adventis Sponsored Banner -->
   <a class="adventis-banner" href="https://adventishub.com/" target="_blank" rel="noopener sponsored">
     <div class="adventis-banner-left">
-      <img src="https://adventishub.com/images/Website_Adventis_Logo.png" alt="Adventis" class="adventis-logo"/>
+      <img src="https://adventishub.com/images/Website_Adventis_Logo.png" alt="Adventis" class="adventis-logo" style="height:32px;width:auto;max-width:150px;object-fit:contain;flex-shrink:0"/>
     </div>
     <div class="adventis-banner-middle">
       <p class="adventis-tagline">Performance Marketing &bull; Analytics &bull; AI Solutions</p>
@@ -110,8 +110,8 @@ layout: default
     .adventis-banner::after{content:"";position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(0,196,140,.15) 0%,transparent 70%);pointer-events:none}
     .adventis-banner::before{content:"Sponsored";position:absolute;top:9px;right:12px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3)}
     .adventis-banner:hover{border-color:rgba(0,196,140,.5);box-shadow:0 8px 40px rgba(0,196,140,.15);transform:translateY(-1px)}
-    .adventis-banner-left{flex-shrink:0}
-    .adventis-logo{height:34px;width:auto;display:block;filter:brightness(0) invert(1)}
+    .adventis-banner-left{flex-shrink:0;flex-grow:0}
+    .adventis-logo{height:32px;width:auto;max-width:150px;object-fit:contain;display:block;flex-shrink:0;filter:brightness(0) invert(1)}
     .adventis-banner-middle{flex:1;min-width:0}
     .adventis-tagline{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,196,140,.9);margin:0 0 5px}
     .adventis-desc{font-size:13px;color:rgba(255,255,255,.85);margin:0;line-height:1.45;font-weight:400}
