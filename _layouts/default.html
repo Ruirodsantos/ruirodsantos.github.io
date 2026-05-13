@@ -14,7 +14,7 @@
   <link rel="alternate icon" href="/favicon.svg"/>
   <link rel="apple-touch-icon" href="/favicon.svg"/>
   <link rel="manifest" href="/manifest.json"/>
-  <title>{{ page.title | escape }} | AI Pulse</title>
+  <title>{{ page.title | escape }} | The AI Pulse Hub</title>
   <!-- Canonical -->
   <link rel="canonical" href="https://ruirodsantos.github.io{{ page.url }}"/>
   <!-- Primary Meta -->
@@ -328,7 +328,11 @@
   <link rel="canonical" href="{{ page.url | absolute_url }}"/>
 
   <!-- Open Graph (Facebook, LinkedIn, WhatsApp previews) -->
-  <meta property="og:type" content="{{ if page.layout == "post" }}article{{ else }}website{{ endif }}"/>
+  {% if page.layout == "post" %}
+  <meta property="og:type" content="article"/>
+  {% else %}
+  <meta property="og:type" content="website"/>
+  {% endif %}
   <meta property="og:title" content="{{ page.title | default: site.title }}"/>
   <meta property="og:description" content="{{ page.excerpt | strip_html | strip_newlines | truncate: 155 | default: site.description }}"/>
   <meta property="og:url" content="{{ page.url | absolute_url }}"/>
@@ -344,11 +348,15 @@
   <meta property="article:author" content="The AI Pulse Hub"/>
   {% endif %}
 
+  {% if page.author %}
+  <meta property="article:author" content="{{ page.author }}"/>
+  {% endif %}
+
   <!-- Twitter/X Card -->
   <meta name="twitter:card" content="summary_large_image"/>
   <meta name="twitter:title" content="{{ page.title | default: site.title }}"/>
   <meta name="twitter:description" content="{{ page.excerpt | strip_html | strip_newlines | truncate: 155 | default: site.description }}"/>
-  <meta name="twitter:image" content="{{ page.image | default: site.url | append: "/assets/og-default.jpg" }}"/>
+  <meta name="twitter:image" content="{{ page.image | default: "https://theaipulsehub.com/assets/og-default.jpg" }}"/>
   <meta name="twitter:site" content="@theaipulsehub"/>
 
   <!-- Google News & Publisher -->
