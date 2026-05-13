@@ -19,11 +19,17 @@ layout: default
   },
   "datePublished": "{{ page.date | date_to_xmlschema }}",
   "dateModified": "{{ page.date | date_to_xmlschema }}",
-  "author": {
-    "@type": "Organization",
-    "name": "The AI Pulse Hub",
-    "url": "https://theaipulsehub.com"
-  },
+  "author": [
+    {
+      "@type": "Organization",
+      "name": "The AI Pulse Hub",
+      "url": "https://theaipulsehub.com"
+    },
+    {
+      "@type": "Person",
+      "name": "{{ page.author | default: "The AI Pulse Hub Editorial Team" }}"
+    }
+  ],
   "publisher": {
     "@type": "Organization",
     "name": "The AI Pulse Hub",
@@ -88,6 +94,24 @@ layout: default
     <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
   </div>
 
+  <!-- Related Articles -->
+  <div class="related-posts">
+    <h3 class="related-title">More from The AI Pulse Hub</h3>
+    <div class="related-grid">
+    {% assign related = site.posts | where_exp: "item", "item.url != page.url" %}
+    {% for item in related limit:3 %}
+      <a class="related-card" href="{{ item.url | relative_url }}">
+        <div class="related-img" style="background-image:url('{{ item.image }}')"></div>
+        <div class="related-body">
+          <span class="related-cat">{{ item.categories | first | upcase | default: "AI" }}</span>
+          <p class="related-headline">{{ item.title | truncate: 65 }}</p>
+          <span class="related-date">{{ item.date | date: "%b %d" }}</span>
+        </div>
+      </a>
+    {% endfor %}
+    </div>
+  </div>
+
   <!-- Adventis Sponsored Banner -->
   <a class="adventis-banner" href="https://adventishub.com/" target="_blank" rel="noopener sponsored">
     <div class="adventis-banner-left">
@@ -128,7 +152,19 @@ layout: default
 .share-meta{background:#1877f2;color:#fff}
 .share-ig{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff}
 .share-copy{background:#f0f0f0;color:#333;font-size:11px}
-</style>
+
+    .related-posts{margin:32px 0 8px}
+    .related-title{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em}
+    .related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    @media(max-width:700px){.related-grid{grid-template-columns:1fr}}
+    .related-card{display:flex;flex-direction:column;text-decoration:none;border-radius:10px;overflow:hidden;background:#f8f9fa;transition:transform .15s}
+    .related-card:hover{transform:translateY(-2px)}
+    .related-img{height:110px;background-size:cover;background-position:center;background-color:#eee}
+    .related-body{padding:12px}
+    .related-cat{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--green)}
+    .related-headline{font-size:13px;font-weight:700;color:var(--navy);margin:4px 0;line-height:1.4}
+    .related-date{font-size:11px;color:#aaa}
+    </style>
 
     <div class="share-bar">
       <span class="share-label">Share:</span>
