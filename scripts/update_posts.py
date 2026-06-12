@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""AI Pulse Hub - Article Generator. Generates 700-900 word original articles."""
+"""AI Pulse Hub - Article Generator v2
+Uses Claude API with web_search to find AND write 750-900 word articles.
+No dependency on NewsAPI or RSS feeds (which were silently failing)."""
 
-import os, re, json, time, random, hashlib
+import os, re, json, time, hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -14,7 +16,8 @@ except ImportError:
 
 POSTS_DIR = "_posts"
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY","")
-NEWS_API_KEY = os.environ.get("NEWS_API_KEY","")
+API_URL = "https://api.anthropic.com/v1/messages"
+HEADERS = {"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"}
 
 IMAGES = [
     "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
@@ -51,92 +54,6 @@ def get_image(title):
     idx = int(hashlib.md5(title.encode()).hexdigest(),16) % len(IMAGES)
     return IMAGES[idx]
 
-def fetch_news():
-    articles = []
-    if NEWS_API_KEY:
-        queries = ["artificial intelligence","AI startup funding","machine learning breakthrough","OpenAI Anthropic Google AI","AI regulation policy"]
-        for q in queries:
-            try:
-                r = requests.get("https://newsapi.org/v2/everything",params={"q":q,"language":"en","sortBy":"publishedAt","pageSize":4,"apiKey":NEWS_API_KEY},timeout=10)
-                if r.status_code == 200:
-                    for a in r.json().get("articles",[]):
-                        if a.get("title") and "[Removed]" not in a.get("title","") and len(a.get("title","")) > 20:
-                            articles.append({"title":a["title"],"url":a.get("url",""),"description":a.get("description","") or a.get("content",""),"source":a.get("source",{}).get("name","")})
-                time.sleep(0.3)
-            except Exception as e:
-                print(f"NewsAPI error: {e}")
-    if len(articles) < 5:
-        feeds = ["https://techcrunch.com/category/artificial-intelligence/feed/","https://venturebeat.com/category/ai/feed/","https://www.technologyreview.com/topic/artificial-intelligence/feed/"]
-        for feed in feeds:
-            try:
-                r = requests.get(feed,timeout=10,headers={"User-Agent":"Mozilla/5.0"})
-                titles = re.findall(r'<title><![CDATA[(.*?)]]></title>',r.text)
-                links = re.findall(r'<link>(https?://[^<]+)</link>',r.text)
-                descs = re.findall(r'<description><![CDATA[(.*?)]]></description>',r.text,re.DOTALL)
-                src = re.search(r'https?://([^/]+)',feed)
-                src_name = src.group(1).replace("www.","") if src else "source"
-                for i,title in enumerate(titles[1:6]):
-                    desc = re.sub(r'<[^>]+>','',descs[i] if i < len(descs) else "")[:400]
-                    articles.append({"title":title.strip(),"url":links[i+1] if i+1 < len(links) else "","description":desc,"source":src_name})
-            except Exception as e:
-                print(f"Feed error: {e}")
-    return articles
-
-def generate_article(title, description, source_url, source_name):
-    if not ANTHROPIC_KEY:
-        return generate_fallback(title, description)
-    prompt = f"""You are a senior technology journalist for The AI Pulse Hub, a daily AI news publication.
-
-Write a comprehensive, original 750-900 word article about this story. Add real analysis and insight that readers cannot get just from reading the headline.
-
-TITLE: {title}
-SUMMARY: {description}
-SOURCE: {source_name}
-
-Write with these exact sections (plain text, NO markdown headers, NO hashtags):
-
-Opening (70-90 words): Start with a compelling hook, analogy, or surprising fact. Do NOT start with the company name. Make the reader want to keep reading.
-
-What happened (100-130 words): Clear, jargon-free explanation of the news. What, who, when.
-
-Why this matters (160-200 words): Deep analysis. Who is affected and how? What does this change? Give historical context and compare to similar past events.
-
-The bigger picture (150-180 words): How this fits into the wider AI industry narrative. What trends does it reinforce or disrupt? What would industry insiders say about this?
-
-What this means for you (120-150 words): Practical implications. Tailor to three types of readers: developers, business owners, and everyday people. Be specific.
-
-What to watch next (80-100 words): Three specific forward-looking things to monitor. Concrete, actionable.
-
-Closing sentence (1 sentence): End with a punchy, memorable line that gives a final perspective.
-
-RULES:
-- Short paragraphs (2-4 sentences max)
-- Conversational but authoritative tone
-- Include specific names, companies, and numbers where possible
-- Original analysis, not just a summary
-- Never write "this article" or "in this piece"
-- No em-dashes
-- Output ONLY the article text, nothing else"""
-
-    try:
-        r = requests.post("https://api.anthropic.com/v1/messages",
-            headers={"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","content-type":"application/json"},
-            json={"model":"claude-opus-4-5","max_tokens":1300,"messages":[{"role":"user","content":prompt}]},
-            timeout=90)
-        if r.status_code == 200:
-            content = r.json()["content"][0]["text"]
-            print(f"  Generated {len(content.split())} words via Claude API")
-            return content
-        else:
-            print(f"  API error: {r.status_code} {r.text[:100]}")
-    except Exception as e:
-        print(f"  API exception: {e}")
-    return generate_fallback(title, description)
-
-def generate_fallback(title, description):
-    desc = description or ""
-    return f"{desc}\n\nThis story represents a significant development in the AI landscape. As artificial intelligence continues to reshape industries and daily life, stories like this one highlight both the opportunities and challenges that come with rapid technological change.\n\nStay tuned to The AI Pulse Hub for continued coverage and analysis as this story develops."
-
 def slugify(title):
     s = title.lower()
     s = re.sub(r'[^\w\s-]','',s)
@@ -150,6 +67,102 @@ def post_exists(title):
             return True
     return False
 
+def call_claude(payload, timeout=120):
+    r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=timeout)
+    if r.status_code != 200:
+        print(f"  API ERROR {r.status_code}: {r.text[:300]}")
+        return None
+    return r.json()
+
+def extract_text(data):
+    """Extract and concatenate all text blocks from a Claude response."""
+    if not data:
+        return ""
+    blocks = data.get("content", [])
+    return "\n".join(b.get("text","") for b in blocks if b.get("type") == "text")
+
+def fetch_news_via_claude():
+    """Use Claude + web_search to find today's top AI news stories."""
+    prompt = """Search the web for 8 significant, distinct AI / artificial intelligence news stories published in the last 24-48 hours.
+
+Cover a MIX of these areas: AI tool/product launches, major AI company news (OpenAI, Anthropic, Google, Microsoft, Meta, NVIDIA, xAI etc.), AI startup funding or acquisitions, AI research breakthroughs, AI policy/regulation, and practical ways people can use AI to work or make money.
+
+After researching, respond with ONLY a JSON array (no markdown fences, no commentary) in this exact format:
+[{"title": "...", "url": "...", "source": "...", "summary": "2-3 sentence summary of what happened and why it's notable"}]
+
+The "url" must be a real, working URL to the original source article you found."""
+
+    data = call_claude({
+        "model": "claude-opus-4-5",
+        "max_tokens": 4000,
+        "messages": [{"role": "user", "content": prompt}],
+        "tools": [{"type": "web_search_20250305", "name": "web_search", "max_uses": 6}]
+    }, timeout=150)
+
+    text = extract_text(data)
+    if not text:
+        print("  No text returned from news search call")
+        return []
+
+    text = text.strip()
+    text = re.sub(r'^```json\s*|\s*```$', '', text, flags=re.MULTILINE).strip()
+    match = re.search(r'\[.*\]', text, re.DOTALL)
+    if not match:
+        print(f"  Could not find JSON array in response. First 300 chars: {text[:300]}")
+        return []
+    try:
+        items = json.loads(match.group(0))
+        return [it for it in items if it.get("title") and len(it.get("title",""))>15]
+    except json.JSONDecodeError as e:
+        print(f"  JSON parse error: {e}. First 300 chars: {text[:300]}")
+        return []
+
+def generate_article(title, summary, source_url, source_name):
+    """Generate a 750-900 word original article with analysis."""
+    prompt = f"""You are a senior technology journalist for The AI Pulse Hub, a daily AI news publication.
+
+Write a comprehensive, original 750-900 word article about this story. Add real analysis and insight readers cannot get just from the headline.
+
+TITLE: {title}
+SUMMARY: {summary}
+SOURCE: {source_name} ({source_url})
+
+Write with these sections, in plain paragraphs (NO markdown headers, NO hashtags, NO bullet symbols):
+
+Opening (70-90 words): A compelling hook, analogy, or surprising angle. Do NOT start with the company name.
+
+What happened (100-130 words): Clear, jargon-free explanation. What, who, when.
+
+Why this matters (160-200 words): Deep analysis. Who is affected and how? Historical context, comparisons to similar past events.
+
+The bigger picture (150-180 words): How this fits the wider AI industry narrative. What trends does it reinforce or disrupt?
+
+What this means for you (120-150 words): Practical implications for developers, business owners, and everyday people. Be specific.
+
+What to watch next (80-100 words): Three concrete, forward-looking things to monitor.
+
+Closing sentence: One punchy, memorable final line.
+
+RULES:
+- Short paragraphs (2-4 sentences)
+- Conversational but authoritative tone
+- Include specific names, companies, numbers where possible
+- Original analysis, not just a summary
+- Never write "this article" or "in this piece"
+- No em-dashes
+- Output ONLY the article body text, nothing else"""
+
+    data = call_claude({
+        "model": "claude-opus-4-5",
+        "max_tokens": 1400,
+        "messages": [{"role": "user", "content": prompt}]
+    }, timeout=90)
+
+    text = extract_text(data)
+    if text:
+        return text.strip()
+    return f"{summary}\n\nThis story represents a significant development in the AI landscape. Stay tuned to The AI Pulse Hub for continued coverage."
+
 def make_excerpt(content):
     clean = re.sub(r'<[^>]+>','',content)
     clean = ' '.join(clean.split())
@@ -159,11 +172,13 @@ def make_excerpt(content):
 def build_post(article):
     title = article["title"].strip().replace('"',"'")
     if post_exists(title):
-        print(f"  Skip: {title[:50]}")
+        print(f"  Skip (exists): {title[:50]}")
         return False
-    content = generate_article(title, article.get("description",""), article.get("url",""), article.get("source",""))
+
+    print(f"  Generating article...")
+    content = generate_article(title, article.get("summary",""), article.get("url",""), article.get("source",""))
     excerpt = make_excerpt(content)
-    cat = get_category(title+" "+article.get("description",""))
+    cat = get_category(title+" "+article.get("summary",""))
     image = get_image(title)
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     slug = slugify(title)
@@ -173,6 +188,7 @@ def build_post(article):
     safe_excerpt = excerpt.replace('"',"'")
     source_url = article.get('url','')
     source_name = article.get('source','Source')
+
     post = f"""---
 layout: post
 title: "{title}"
@@ -197,27 +213,32 @@ author: "The AI Pulse Hub Editorial Team"
     return True
 
 def main():
-    print(f"=== AI Pulse Hub Article Generator ===")
+    print("=== AI Pulse Hub Article Generator v2 ===")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}")
-    print(f"API: {'Claude API active' if ANTHROPIC_KEY else 'Fallback mode (no API key)'}")
-    articles = fetch_news()
-    print(f"Fetched {len(articles)} raw articles")
-    seen,unique = set(),[]
+    if not ANTHROPIC_KEY:
+        print("FATAL: ANTHROPIC_API_KEY not set. Exiting.")
+        return
+    print("Searching for today's AI news via Claude web search...")
+    articles = fetch_news_via_claude()
+    print(f"Found {len(articles)} candidate stories")
+
+    seen, unique = set(), []
     for a in articles:
         k = slugify(a["title"])
-        if k not in seen and len(a["title"])>20:
+        if k not in seen:
             seen.add(k)
             unique.append(a)
-    print(f"Unique: {len(unique)}")
+
     created = 0
     for a in unique[:8]:
-        print(f"\nProcessing: {a['title'][:60]}...")
+        print(f"\nProcessing: {a['title'][:70]}")
         try:
             if build_post(a):
                 created += 1
-            time.sleep(2)
+            time.sleep(1)
         except Exception as e:
             print(f"  Error: {e}")
+
     print(f"\nDone. Created {created} posts.")
 
 if __name__ == "__main__":
